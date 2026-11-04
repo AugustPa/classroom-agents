@@ -6,7 +6,7 @@
     "start": "node index.js",
     "dev": "node index.js",
     "public": "node scripts/open-public.js",
-    "examples": "node scripts/render-example-videos.js",
+    "examples": "node scripts/render-sharp-videos.js",
     "test": "echo \"No tests configured\""
   },
   "keywords": [],

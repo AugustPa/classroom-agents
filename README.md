@@ -2,19 +2,19 @@
 
 Fifteen people, one shared field. Each student is an animal. They only see whoever the experiment allows, and the pattern you measure afterwards is the collective behaviour.
 
-The recordings below play by themselves. To scrub them, or to run the live class, see [the browser page](https://pvnkmrksk.github.io/classroom-agents/) and the run instructions further down. GitHub Pages can play these saved runs in the browser. It cannot host the live class, because fifteen students have to share one world.
+The recordings below are video, so the lines stay sharp. Scrub them on [the browser page](https://pvnkmrksk.github.io/classroom-agents/). GitHub Pages can play these saved runs. The live class, where fifteen students share one world, still needs the server on a laptop.
 
-<img src="examples/videos/fpv-damage.gif" alt="First-person view of a fox moving with the others while the integrity bar falls" width="100%">
+<video src="https://raw.githubusercontent.com/pvnkmrksk/classroom-agents/main/examples/videos/fpv-herd.mp4" poster="examples/posters/fpv-herd.jpg" autoplay muted loop playsinline width="100%"></video>
 
-A fox among foxes. Every bump takes integrity off the bar across the top.
+First person, looking across the herd.
 
-<img src="examples/videos/echo-side-by-side.gif" alt="With a bridge the two chambers join. Without a bridge they leave on opposite headings" width="100%">
+<video src="https://raw.githubusercontent.com/pvnkmrksk/classroom-agents/main/examples/videos/echo-side-by-side.mp4" poster="examples/posters/echo-side-by-side.png" autoplay muted loop playsinline width="100%"></video>
 
-**Echo chambers.** Blue sees only blue, red sees only red. With one fox who can see both, red is pulled onto the blue heading. Without that bridge the two marches never meet.
+**Echo chambers.** Blue sees only blue, red only red. With one fox who can see both, red joins the blue heading and they finish as one march. Without that bridge they finish on two headings.
 
-<img src="examples/videos/taxis-side-by-side.gif" alt="Social foxes reach the slow patch in about 10 seconds. Solitary foxes take about 75" width="100%">
+<video src="https://raw.githubusercontent.com/pvnkmrksk/classroom-agents/main/examples/videos/taxis-side-by-side.mp4" poster="examples/posters/taxis-side-by-side.png" autoplay muted loop playsinline width="100%"></video>
 
-**Finding a patch nobody can see.** The blue disc is the slow region. Record was already running before the walk, so the clock starts when most of them are moving: 4 seconds into the social take, 6 seconds into the solitary one. After that, the median social fox is in the patch at **10 seconds**, and half the group is inside by **54 seconds**. They stay. Alone, the median fox arrives at **75 seconds**, and half the group is inside only around **78 seconds**.
+**Finding a patch.** These are the last two recordings, from the moment the patch and the condition are set, through to the end of each take. The patch is 4 m across. Social: the median fox is inside at **26 seconds**, and by **36 seconds** twelve of the thirteen are stopped in it. Solitary: at the end of that recording, **106 seconds**, the group is still spread across the field.
 
 The clips are real class runs. The trajectories are in [`examples/replays/`](examples/replays/). They load into the dashboard on startup, unchecked, so they do not enter a new lecture’s average. Open the trial list and press **Replay**. On the [browser page](https://pvnkmrksk.github.io/classroom-agents/) you can play and scrub the same files without installing anything. Nothing you do there is uploaded.
 
@@ -79,13 +79,13 @@ The buttons along the top of the dashboard are the canonical models. One click r
 
 | Run | Replay | Video |
 |---|---|---|
-| First person, collisions |  | [`examples/videos/fpv-damage.gif`](examples/videos/fpv-damage.gif) |
-| Echo chambers, side by side |  | [`examples/videos/echo-side-by-side.gif`](examples/videos/echo-side-by-side.gif) |
-| Patch finding, side by side |  | [`examples/videos/taxis-side-by-side.gif`](examples/videos/taxis-side-by-side.gif) |
-| Echo chambers, with a bridge | [`examples/replays/echo-with-bridge.json`](examples/replays/echo-with-bridge.json) | [`examples/videos/echo-with-bridge.mp4`](examples/videos/echo-with-bridge.mp4) |
-| Echo chambers, no bridge | [`examples/replays/echo-no-bridge.json`](examples/replays/echo-no-bridge.json) | [`examples/videos/echo-no-bridge.mp4`](examples/videos/echo-no-bridge.mp4) |
-| Patch finding, social | [`examples/replays/taxis-social.json`](examples/replays/taxis-social.json) | [`examples/videos/taxis-social.mp4`](examples/videos/taxis-social.mp4) |
-| Patch finding, solitary | [`examples/replays/taxis-solo.json`](examples/replays/taxis-solo.json) | [`examples/videos/taxis-solo.mp4`](examples/videos/taxis-solo.mp4) |
+| First person |  | [`examples/videos/fpv-herd.mp4`](examples/videos/fpv-herd.mp4) |
+| Echo chambers, side by side |  | [`examples/videos/echo-side-by-side.mp4`](examples/videos/echo-side-by-side.mp4) |
+| Patch finding, side by side |  | [`examples/videos/taxis-side-by-side.mp4`](examples/videos/taxis-side-by-side.mp4) |
+| Echo chambers, with a bridge | [`examples/replays/echo-with-bridge.json`](examples/replays/echo-with-bridge.json) | |
+| Echo chambers, no bridge | [`examples/replays/echo-no-bridge.json`](examples/replays/echo-no-bridge.json) | |
+| Patch finding, social | [`examples/replays/taxis-social.json`](examples/replays/taxis-social.json) | |
+| Patch finding, solitary | [`examples/replays/taxis-solo.json`](examples/replays/taxis-solo.json) | |
 
 Posters are in [`examples/posters/`](examples/posters/). To draw the videos again from a local trial shelf (`trials/lecture-trials.json`) you need `ffmpeg`:
 
@@ -93,7 +93,7 @@ Posters are in [`examples/posters/`](examples/posters/). To draw the videos agai
 npm run examples
 ```
 
-The patch circle in the taxis clip is the real slow region. It is fit to the occupancy the server logged, after the first few seconds, because record started before the walk and the patch had just been placed. Saved trial names do not match the condition: trust `visibilityRule` (`all` is social, `blind_solo` is solitary).
+The patch in that clip is 4 m across, taken from the log for the last two takes. Each clip starts when that patch and that condition are set, and runs to the end of the recording. Social is the take that ends with the group stopped inside it. Solitary is the take that ends with the group still spread.
 
 ## References
 

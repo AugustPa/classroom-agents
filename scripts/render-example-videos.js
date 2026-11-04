@@ -535,42 +535,8 @@ function renderReplay(replay, spec) {
 }
 
 async function main() {
-  fs.mkdirSync(videoDir, { recursive: true });
-  fs.mkdirSync(posterDir, { recursive: true });
-  refreshReplays();
-  if (!process.env.SKIP_SINGLES) {
-    for (const spec of SPECS) {
-      const file = path.join(replayDir, spec.file);
-      if (!fs.existsSync(file)) {
-        console.warn("skip missing", spec.file);
-        continue;
-      }
-      const replay = JSON.parse(fs.readFileSync(file, "utf8"));
-      await renderReplay(replay, spec);
-    }
-  }
-  if (process.env.ONLY !== "taxis") {
-    await renderPair(
-      ["echo-with-bridge.json", "echo-no-bridge.json"],
-      ["WITH A BRIDGE", "NO BRIDGE"],
-      "echo-side-by-side",
-      "echo",
-      16,
-      { syncWalk: false, spanMs: 42000 },
-    );
-    await toGif("examples/videos/echo-side-by-side.mp4", "examples/videos/echo-side-by-side.gif", 960);
-  }
-  if (process.env.ONLY !== "echo") {
-    await renderPair(
-      ["taxis-social.json", "taxis-solo.json"],
-      ["SOCIAL", "SOLITARY"],
-      "taxis-side-by-side",
-      "taxis",
-      18,
-      { syncWalk: true, spanMs: 90000, posterAt: 0.62 },
-    );
-    await toGif("examples/videos/taxis-side-by-side.mp4", "examples/videos/taxis-side-by-side.gif", 960);
-  }
+  console.error("Use scripts/render-sharp-videos.js");
+  process.exit(0);
 }
 
 function movementOnset(replay) {

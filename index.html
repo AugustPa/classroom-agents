@@ -82,17 +82,16 @@
   <h1>Classroom collective behaviour</h1>
   <p>This page plays real class runs in your browser. The live lecture, where fifteen students share one world, needs the small server below. GitHub Pages can only serve files, so it cannot host that shared world.</p>
 
-  <img class="full" src="examples/videos/fpv-damage.gif" alt="First-person view of a fox walking through other foxes while the integrity bar falls">
-  <p class="muted">First person. Contact with another fox lowers the bar across the top. The bar in this clip is the same readout the student sees, drawn on frames from the live view.</p>
+  <video class="full" autoplay muted loop playsinline src="examples/videos/fpv-herd.mp4" poster="examples/posters/fpv-herd.jpg"></video>
+  <p class="muted">First person, looking across the herd.</p>
 
   <h2>Echo chambers</h2>
-  <img class="clip" src="examples/videos/echo-side-by-side.gif" alt="Side by side: with a bridge the two colours join, without a bridge they leave on opposite headings">
-  <p>Blue can see only blue, red only red. With one fox who can see both, the red march is pulled onto the blue heading. Without that bridge the two marches never meet.</p>
+  <video class="clip" autoplay muted loop playsinline src="examples/videos/echo-side-by-side.mp4" poster="examples/posters/echo-side-by-side.png"></video>
+  <p>Blue can see only blue, red only red. With one fox who can see both, red joins the blue heading and they finish as one march. Without that bridge they finish on two headings.</p>
 
   <h2>Finding a patch</h2>
-  <img class="clip" src="examples/videos/taxis-side-by-side.gif" alt="Side by side: the social group reaches the slow patch long before the solitary foxes">
-  <p>The slow patch is the blue disc. Nobody is told where it is. Record was already running before people walked, so the clock starts when most of them are moving: about 4 seconds into the social take and 6 seconds into the solitary one.</p>
-  <p>After that, the median social fox is in the patch at <strong>10 seconds</strong>, and half the group is inside by <strong>54 seconds</strong>. They stay. Alone, the median fox arrives at <strong>75 seconds</strong>, and half the group is inside only around <strong>78 seconds</strong>.</p>
+  <video class="clip" autoplay muted loop playsinline src="examples/videos/taxis-side-by-side.mp4" poster="examples/posters/taxis-side-by-side.png"></video>
+  <p>These are the last two patch recordings, from the moment that patch and that condition are set, through to the end of each take. The patch is 4 m across. Social: the median fox is inside at 26 seconds, and by 36 seconds twelve of the thirteen are stopped in it. Solitary: at the end of that recording, 106 seconds, the group is still spread across the field.</p>
 
   <h2>Scrub the same runs</h2>
   <p class="muted">Nothing you do here is uploaded. The trajectories are the saved class files, played locally in this tab.</p>
@@ -123,14 +122,10 @@ const PAIRS = {
   taxis: {
     files: ["examples/replays/taxis-social.json", "examples/replays/taxis-solo.json"],
     labels: ["Social", "Solitary"],
-    span: 90000,
-    syncWalk: true,
   },
   echo: {
     files: ["examples/replays/echo-with-bridge.json", "examples/replays/echo-no-bridge.json"],
     labels: ["With a bridge", "No bridge"],
-    span: 42000,
-    syncWalk: false,
   },
 };
 
@@ -143,6 +138,7 @@ const cache = new Map();
 let pairKey = "taxis";
 let replays = [];
 let shown = 0;
+let spanMs = 1000;
 let playing = false;
 let last = 0;
 
@@ -283,9 +279,9 @@ function drawPanel(canvas, replay, label, tData, shownMs) {
   ctx.fillText(label, 16, 24);
   const clock = replay.clock || {};
   ctx.font = "13px ui-sans-serif, system-ui, sans-serif";
-  if (clock.medianArrivalMs != null) {
-    ctx.fillStyle = shownMs >= clock.medianArrivalMs ? "#fde68a" : "#cbd5e1";
-    ctx.fillText(`Median in ${Math.round(clock.medianArrivalMs / 1000)} sec`, 16, 44);
+  if (replay.clock && replay.clock.togetherMs != null) {
+    ctx.fillStyle = shownMs >= replay.clock.togetherMs ? "#fde68a" : "#cbd5e1";
+    ctx.fillText(`Together at ${Math.round(replay.clock.togetherMs / 1000)} sec`, 16, 44);
   }
   if (replay.oasis) {
     ctx.fillStyle = "#bae6fd";
@@ -298,16 +294,16 @@ function frame(now) {
   if (playing) {
     const dt = last ? Math.min(80, now - last) : 16;
     const spec = PAIRS[pairKey];
-    shown += dt * 4;
-    if (shown >= spec.span) { shown = spec.span; playing = false; playBtn.textContent = "Play"; }
-    scrub.value = String(Math.round(1000 * shown / spec.span));
+    shown += dt * 5;
+    if (shown >= spanMs) { shown = spanMs; playing = false; playBtn.textContent = "Play"; }
+    scrub.value = String(Math.round(1000 * shown / spanMs));
   }
   last = now;
   const spec = PAIRS[pairKey];
   clockEl.textContent = `${Math.round(shown / 1000)} sec`;
   replays.forEach((replay, i) => {
-    const onset = spec.syncWalk && replay.clock ? replay.clock.walkOnsetMs : 0;
-    drawPanel(canvases[i], replay, spec.labels[i], onset + shown, shown);
+    const end = replay.samples.at(-1).t;
+    drawPanel(canvases[i], replay, spec.labels[i], Math.min(shown, end), shown);
   });
   if (playing) requestAnimationFrame(frame);
 }
@@ -333,12 +329,14 @@ async function showPair(key) {
   statusEl.textContent = "Loading the class run…";
   try {
     replays = await Promise.all(PAIRS[key].files.map(loadReplay));
-    const bits = replays.map((replay, i) => {
-      const clock = replay.clock;
-      if (!clock || clock.medianArrivalMs == null) return PAIRS[key].labels[i];
-      return `${PAIRS[key].labels[i]}: median ${Math.round(clock.medianArrivalMs / 1000)} sec, half the group ${Math.round(clock.groupHalfMs / 1000)} sec`;
-    });
-    statusEl.textContent = bits.join("  ·  ");
+    spanMs = Math.max(...replays.map((replay) => replay.samples.at(-1).t));
+    statusEl.textContent = replays.map((replay, i) => {
+      const clock = replay.clock || {};
+      const label = PAIRS[key].labels[i];
+      if (clock.togetherMs != null) return `${label}: stopped together at ${Math.round(clock.togetherMs / 1000)} sec`;
+      if (replay.oasis) return `${label}: still spread at ${Math.round(replay.samples.at(-1).t / 1000)} sec`;
+      return label;
+    }).join("  ·  ");
     last = 0;
     frame(performance.now());
   } catch (err) {
@@ -347,8 +345,7 @@ async function showPair(key) {
 }
 
 playBtn.addEventListener("click", () => {
-  const spec = PAIRS[pairKey];
-  if (shown >= spec.span) shown = 0;
+  if (shown >= spanMs) shown = 0;
   playing = !playing;
   playBtn.textContent = playing ? "Pause" : "Play";
   last = 0;
@@ -357,7 +354,7 @@ playBtn.addEventListener("click", () => {
 scrub.addEventListener("input", () => {
   playing = false;
   playBtn.textContent = "Play";
-  shown = (Number(scrub.value) / 1000) * PAIRS[pairKey].span;
+  shown = (Number(scrub.value) / 1000) * spanMs;
   last = 0;
   frame(performance.now());
 });
