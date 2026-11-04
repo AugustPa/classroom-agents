@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Classroom Collective Behavior Lab (N = 15)</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="admin-page">
+    <div class="admin-lock" id="adminLock">
+      <form id="adminLockForm" class="join-card">
+        <h1>Lecturer dashboard</h1>
+        <p>The key was printed in the terminal when the lab started. Students never need it.</p>
+        <label for="lecturerKeyInput">Lecturer key</label>
+        <input id="lecturerKeyInput" type="password" autocomplete="off" required />
+        <button type="submit">Unlock</button>
+        <p id="adminLockError" class="join-error"></p>
+      </form>
+    </div>
+    <header class="admin-topbar">
+      <div class="topbar-row">
+        <div class="brand-block">
+          <h1>Collective Behavior Lecture Lab (15-Student Edition)</h1>
+          <span class="subtitle" id="sessionStatusBadge">LIVE</span>
+        </div>
+        <div class="topbar-actions">
+          <button type="button" id="btnToggleBotTrailsTop" class="btn-pill active-amber" title="Toggle Bot Trajectories on/off (key control)">
+            Bot Trails: ON
+          </button>
+          <button type="button" id="btnToggleHumanTrailsTop" class="btn-pill active-cyan" title="Toggle Student Trajectories on/off">
+            Student Trails: ON
+          </button>
+          <button type="button" id="btnToggleSidebar" class="btn-pill" title="Show/hide the left settings sidebar">
+            🎛️ Hide Sidebar
+          </button>
+          <button type="button" id="btnToggleLiveMode" class="btn-pill highlight-live" title="Fit the Big Picture plots on one screen (Shortcut: F)">
+            📺 Fullscreen Big Picture
+          </button>
+          <button type="button" id="btnOpenLiveTab" class="btn-pill" title="Open a dedicated Live Big-Picture tab for a projector/second screen while controlling from this tab">
+            ↗ Open Live Tab
+          </button>
+        </div>
+      </div>
+
+      <div class="protocol-bar">
+        <button id="btnExpt1A" class="btn-protocol phase1" title="Buhl et al. 2006: Students see 14 marching bots">
+          1A: Entrainment (Bots)
+        </button>
+        <button id="btnExpt1BInPlace" class="btn-protocol phase2-alt" title="Seamless switch: bots vanish, students see each other">
+          1B: Handoff (In-Place)
+        </button>
+        <button id="btnExpt1BReset" class="btn-protocol phase2" title="Reset positions & switch to 15 real students">
+          1B: 15 Students (Reset)
+        </button>
+        <button id="btnExpt2Bifurc" class="btn-protocol purple" title="Couzin et al. 2005: Two bot streams at ±Δθ/2">
+          2: Bifurcation (±Δθ)
+        </button>
+        <button id="btnExpt3Informed" class="btn-protocol gold" title="Couzin et al. 2005: K=3 secret leaders among 15 students">
+          3: Informed (K=3)
+        </button>
+        <button id="btnExpt4Echo" class="btn-protocol pink" title="Echo Chambers A & B + 1 Bridge student">
+          4A: Echo Chambers
+        </button>
+        <button id="btnExpt4Topo" class="btn-protocol secondary" title="Ballerini et al. 2008: Topological k=4 nearest neighbors">
+          4B: Topological (k=4)
+        </button>
+        <button id="btnExpt5Predator" class="btn-protocol red" title="Looming DCMD stimulus to 1 random student">
+          5: Looming Predator!
+        </button>
+        <button id="btnExpt6Social" class="btn-protocol emerald" title="Berdahl et al. 2013: Social flock finding shaded oasis">
+          6A: Taxis (Social)
+        </button>
+        <button id="btnExpt6Solo" class="btn-protocol secondary" title="Berdahl et al. 2013: Asocial control (blind to peers)">
+          6B: Taxis (Solo)
+        </button>
+        <button id="btnExpt7StopGo" class="btn-protocol phase1" title="Ariel et al. 2014 / Bazazi et al. 2008: Stop when about to bump, then continue with stop-and-go movement">
+          7: Stop &amp; Go
+        </button>
+        <button id="btnExpt8AvoidBumps" class="btn-protocol red" title="Bazazi et al. 2008 / Romanczuk et al. 2009: Avoid bumping — collisions deal damage, test if order emerges">
+          8: Avoid Bumps (Damage)
+        </button>
+      </div>
+      <div class="share-bar">
+        <div>
+          <div class="small">Student link — works off your network once the tunnel is up</div>
+          <strong id="shareUrl">Not public yet. In the project folder run npm run public</strong>
+        </div>
+        <button type="button" id="btnCopyShare" class="btn-pill">Copy student link</button>
+        <label class="share-code">Optional join code
+          <input id="joinCode" type="text" maxlength="40" value="matrex" placeholder="blank = name only" autocomplete="off" />
+        </label>
+      </div>
+    </header>
+
+    <section class="crux-banner" id="cruxBanner">
+      <div class="crux-title" id="cruxTitle">
+        Expt 1: Locust Marching Entrainment &amp; Handoff (Vicsek 1995; Buhl et al., Science 2006)
+      </div>
+      <div class="crux-body" id="cruxBody">
+        <strong>Crux to explain:</strong> In Phase 1A, each student is immersed in 14 virtual peers moving as a Biased Correlated Random Walk with polar vector (R, θ<sub>swarm</sub>). Measure Order Parameter Φ<sub>humans</sub>(t) and Entrainment ⟨cos(θ − θ<sub>swarm</sub>)⟩. Then click <em>1B: Handoff (In-Place)</em> so virtual peers vanish and the 15 students only see each other.
+      </div>
+    </section>
+
+    <section class="kpi-strip">
+      <div class="kpi-card">
+        <div class="kpi-label">Active Experiment &amp; Network</div>
+        <div class="kpi-value" id="kpiPhase">bots_only</div>
+        <div class="kpi-sub" id="kpiModel">directed_swarm | vis: all</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Class Roster (Target N=15)</div>
+        <div class="kpi-value"><span id="kpiHumans">0</span> Students / <span id="kpiBots">14</span> Bots</div>
+        <div class="kpi-sub" id="kpiMatchStatus">14 bots (N−1 for 15 students)</div>
+      </div>
+      <div class="kpi-card highlight-cyan">
+        <div class="kpi-label">Student Order Φ<sub>humans</sub>(t) [Vicsek]</div>
+        <div class="kpi-value" id="kpiHumanPhi">0.000</div>
+        <div class="kpi-sub" id="kpiHumanHeading">Mean θ: 0° | Speed: 0.0 m/s</div>
+      </div>
+      <div class="kpi-card highlight-amber">
+        <div class="kpi-label">Swarm CRW (R, θ) &amp; Entrainment</div>
+        <div class="kpi-value" id="kpiEntrainment">0.000</div>
+        <div class="kpi-sub" id="kpiBotHeading">R: 0.96 | θ: 0° | Φbots 1.00</div>
+      </div>
+      <div class="kpi-card highlight-emerald">
+        <div class="kpi-label">Oasis / Collisions / Cohesion</div>
+        <div class="kpi-value" id="kpiOasis">0% in Oasis</div>
+        <div class="kpi-sub" id="kpiSpread">Spread R<sub>gyr</sub>: 0.0 m | Moving: 0%</div>
+      </div>
+    </section>
+
+    <div class="admin-layout" id="adminLayout">
+      <aside class="panel controls-sidebar" id="controlsSidebar">
+        <details class="settings-group" open>
+          <summary>1. Swarm CRW (R, θ), Bifurcation &amp; Speed</summary>
+          <div class="settings-body">
+            <div class="grid-2col">
+              <div class="row-inline">
+                <label for="phase">Visibility Phase</label>
+                <select id="phase">
+                  <option value="bots_only">bots_only (Bots)</option>
+                  <option value="humans_only">humans_only (Students)</option>
+                  <option value="mixed">mixed (All)</option>
+                </select>
+              </div>
+              <div class="row-inline">
+                <label for="botModel">Bot Motion Model</label>
+                <select id="botModel">
+                  <option value="directed_swarm">directed_swarm (CRW R,θ)</option>
+                  <option value="bifurcating_swarm">bifurcating_swarm (±Δθ/2)</option>
+                  <option value="collision_avoid">collision_avoid (Bump Avoid)</option>
+                  <option value="random_walk">random_walk (Isotropic CRW)</option>
+                  <option value="swirl">swirl (Vortex Mill)</option>
+                  <option value="drift">drift (Smooth Wave)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="label-split">
+                <label for="swarmDirectionDeg">Target Angle θ<sub>swarm</sub></label>
+                <span class="val-badge" id="swarmDirBadge">0° (E)</span>
+              </div>
+              <input id="swarmDirectionDeg" type="range" min="-180" max="180" step="1" value="0" />
+              <div class="quick-angles">
+                <button type="button" class="chip-btn" data-angle="0">0° E</button>
+                <button type="button" class="chip-btn" data-angle="45">45° SE</button>
+                <button type="button" class="chip-btn" data-angle="90">90° S</button>
+                <button type="button" class="chip-btn" data-angle="135">135° SW</button>
+                <button type="button" class="chip-btn" data-angle="180">180° W</button>
+                <button type="button" class="chip-btn" data-angle="-90">-90° N</button>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="label-split">
+                <label for="swarmR">Directed CRW Strength R (0=CRW, 1=Aligned)</label>
+                <span class="val-badge" id="swarmRBadge">R = 0.96 (Strong)</span>
+              </div>
+              <input id="swarmR" type="range" min="0" max="1" step="0.02" value="0.96" />
+              <div class="quick-angles">
+                <button type="button" class="chip-r" data-r="0">0.0 CRW</button>
+                <button type="button" class="chip-r" data-r="0.25">0.25 Weak</button>
+                <button type="button" class="chip-r" data-r="0.5">0.50 Med</button>
+                <button type="button" class="chip-r" data-r="0.75">0.75 High</button>
+                <button type="button" class="chip-r" data-r="0.9">0.90</button>
+                <button type="button" class="chip-r" data-r="1">1.00 Lock</button>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="label-split">
+                <label for="swarmSplitAngleDeg">Bifurcation Split Δθ (Expt 2)</label>
+                <span class="val-badge" id="splitAngleBadge">70° (±35°)</span>
+              </div>
+              <input id="swarmSplitAngleDeg" type="range" min="0" max="160" step="2" value="70" />
+              <div class="quick-angles">
+                <button type="button" class="chip-split" data-split="20">20°</button>
+                <button type="button" class="chip-split" data-split="45">45°</button>
+                <button type="button" class="chip-split" data-split="70">70°</button>
+                <button type="button" class="chip-split" data-split="100">100°</button>
+                <button type="button" class="chip-split" data-split="130">130°</button>
+                <button type="button" class="chip-split" data-split="160">160°</button>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="label-split">
+                <label for="speedVariance">Speed Variance σ<sub>v</sub></label>
+                <span class="val-badge" id="speedVarBadge">15% (0.15)</span>
+              </div>
+              <input id="speedVariance" type="range" min="0" max="0.6" step="0.01" value="0.15" />
+            </div>
+
+            <div class="grid-3col">
+              <div class="row">
+                <label for="informedCount">Informed K</label>
+                <input id="informedCount" type="number" min="0" max="15" step="1" value="0" />
+              </div>
+              <div class="row">
+                <label for="swarmAlignStrength">Turn Pull</label>
+                <input id="swarmAlignStrength" type="number" min="0.02" max="1" step="0.02" value="0.35" />
+              </div>
+              <div class="row">
+                <label for="swarmNoise">Noise η</label>
+                <input id="swarmNoise" type="number" min="0" max="1.4" step="0.02" value="0.08" />
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details class="settings-group" open>
+          <summary>2. Collisions, Network Topology &amp; Oasis</summary>
+          <div class="settings-body">
+            <div class="checkbox-row">
+              <input id="stopAndGoEnabled" type="checkbox" />
+              <label for="stopAndGoEnabled">Stop-and-Go Pause on Near-Bump (Expt 7)</label>
+            </div>
+            <div class="checkbox-row">
+              <input id="collisionScoreEnabled" type="checkbox" />
+              <label for="collisionScoreEnabled">Collision Damage Bar Mode (Expt 8)</label>
+            </div>
+            <div class="grid-3col">
+              <div class="row">
+                <label for="collisionStopDist">Stop Dist (m)</label>
+                <input id="collisionStopDist" type="number" min="1.3" max="5.0" step="0.1" value="2.3" />
+              </div>
+              <div class="row">
+                <label for="collisionRadius">Bump Rad (m)</label>
+                <input id="collisionRadius" type="number" min="0.7" max="3.0" step="0.05" value="1.25" />
+              </div>
+              <div class="row">
+                <label for="deadTimeSec">Dead time (s)</label>
+                <input id="deadTimeSec" type="number" min="0" max="180" step="1" value="8" title="How long a fox stays down after integrity hits 0. 0 means they stay down until you press Reset Dmg." />
+              </div>
+            </div>
+            <button type="button" id="btnResetScores" class="btn-inline">Reset Dmg</button>
+
+            <div class="row-inline" style="margin-top:4px;">
+              <label for="visibilityRule">Social Visibility Network Rule</label>
+              <select id="visibilityRule">
+                <option value="all">all (Full visibility within phase)</option>
+                <option value="topological_k">topological_k (Starling k-nearest)</option>
+                <option value="metric_radius">metric_radius (Within R meters)</option>
+                <option value="echo_chambers">echo_chambers (A &amp; B + Bridge)</option>
+                <option value="star_leader">star_leader (See S1 only)</option>
+                <option value="directed_ring">directed_ring (Ring S1→S2→…)</option>
+                <option value="blind_solo">blind_solo (Asocial solo control)</option>
+              </select>
+            </div>
+            <div class="grid-2col">
+              <div class="row">
+                <label for="topologicalK">Topological k</label>
+                <input id="topologicalK" type="number" min="1" max="15" step="1" value="4" />
+              </div>
+              <div class="row">
+                <label for="metricRadius">Metric R (m)</label>
+                <input id="metricRadius" type="number" min="2" max="80" step="1" value="10" />
+              </div>
+            </div>
+
+            <div class="grid-2col" style="margin-top:2px;">
+              <div class="checkbox-row">
+                <input id="oasisEnabled" type="checkbox" />
+                <label for="oasisEnabled">Oasis Zone (Expt 6)</label>
+              </div>
+              <div class="checkbox-row">
+                <input id="oasisShowHint" type="checkbox" checked />
+                <label for="oasisShowHint">3D Oasis Circle</label>
+              </div>
+            </div>
+            <div class="grid-2col">
+              <div class="row">
+                <label for="oasisRadius">Oasis Rad (m)</label>
+                <input id="oasisRadius" type="number" min="3" max="35" step="1" value="11" />
+              </div>
+              <div class="row">
+                <label for="oasisSlowFactor">Oasis Slow ×</label>
+                <input id="oasisSlowFactor" type="number" min="0.1" max="1" step="0.05" value="0.32" />
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details class="settings-group">
+          <summary>3. Arena, Speeds, Scarves &amp; Trails</summary>
+          <div class="settings-body">
+            <div class="checkbox-row">
+              <input id="matchBotsToHumans" type="checkbox" />
+              <label for="matchBotsToHumans">Auto-match Bots to Students (N − 1)</label>
+            </div>
+            <div class="grid-3col">
+              <div class="row">
+                <label for="botCount">Bots</label>
+                <input id="botCount" type="number" min="0" max="200" step="1" value="14" />
+              </div>
+              <div class="row">
+                <label for="humanSpeed">Human m/s</label>
+                <input id="humanSpeed" type="number" min="0.5" max="40" step="0.5" value="6.2" />
+              </div>
+              <div class="row">
+                <label for="botSpeed">Bot m/s</label>
+                <input id="botSpeed" type="number" min="0" max="40" step="0.5" value="5.5" />
+              </div>
+            </div>
+            <div class="grid-3col">
+              <div class="row">
+                <label for="humanSize">Human Sz</label>
+                <input id="humanSize" type="number" min="0.2" max="4" step="0.1" value="1" />
+              </div>
+              <div class="row">
+                <label for="botSize">Bot Sz</label>
+                <input id="botSize" type="number" min="0.2" max="4" step="0.1" value="1" />
+              </div>
+              <div class="row">
+                <label for="boundaryMode">Boundary</label>
+                <select id="boundaryMode">
+                  <option value="hex_torus">hex_torus (∞)</option>
+                  <option value="open_flow">open_flow</option>
+                  <option value="reflective">reflective</option>
+                  <option value="periodic">periodic</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid-3col">
+              <div class="row">
+                <label for="hexSpacing">Hex Cell (m)</label>
+                <input id="hexSpacing" type="number" min="8" max="45" step="1" value="24" />
+              </div>
+              <div class="row">
+                <label for="hexRings">Ghost Rings</label>
+                <input id="hexRings" type="number" min="0" max="3" step="1" value="2" />
+              </div>
+              <div class="row">
+                <label for="trailSource">Trails Show</label>
+                <select id="trailSource">
+                  <option value="both">Both</option>
+                  <option value="humans">Students only</option>
+                  <option value="bots">Bots only</option>
+                  <option value="none">None</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid-3col">
+              <div class="row">
+                <label for="trailSeconds">Trail (s)</label>
+                <input id="trailSeconds" type="number" min="1" max="300" step="1" value="35" />
+              </div>
+              <div class="row">
+                <label for="trailWidth">Width (px)</label>
+                <input id="trailWidth" type="number" min="0.5" max="6" step="0.1" value="1.8" />
+              </div>
+              <div class="row">
+                <label for="running">Sim Running</label>
+                <div class="checkbox-row" style="margin-top:5px;">
+                  <input id="running" type="checkbox" checked />
+                  <span>On</span>
+                </div>
+              </div>
+            </div>
+            <div class="grid-2col">
+              <div class="checkbox-row">
+                <input id="showScarves" type="checkbox" checked />
+                <label for="showScarves">Show Scarves</label>
+              </div>
+              <div class="checkbox-row">
+                <input id="showTags" type="checkbox" />
+                <label for="showTags">Show 3D Tags</label>
+              </div>
+            </div>
+            <div class="grid-2col">
+              <button type="button" id="btnUniqueScarves" class="btn-inline">Unique Scarves</button>
+              <button type="button" id="btnUniformScarves" class="btn-inline">Uniform Scarves</button>
+            </div>
+            <div class="grid-2col">
+              <div class="checkbox-row">
+                <input id="followCentroid" type="checkbox" checked />
+                <label for="followCentroid">Follow Centroid</label>
+              </div>
+              <div class="checkbox-row">
+                <input id="showTrails" type="checkbox" checked />
+                <label for="showTrails">Master Trails</label>
+              </div>
+            </div>
+            <div class="checkbox-row">
+              <input id="mirrorGhosts" type="checkbox" checked />
+              <label for="mirrorGhosts">Mirror Ghost Replicas (∞ swarm)</label>
+            </div>
+            <div class="row">
+              <label for="godZoom">God View Span (m)</label>
+              <input id="godZoom" type="range" min="35" max="220" step="5" value="80" />
+            </div>
+          </div>
+        </details>
+
+        <details class="settings-group" open>
+          <summary>4. Quick Actions, Share URL &amp; CSVs</summary>
+          <div class="settings-body">
+            <div class="grid-3col">
+              <button id="btnResetPos" type="button">Reset Pos</button>
+              <button id="clearTrails" type="button">Clear Trails</button>
+              <button id="clearHistory" type="button">Clear Plots</button>
+            </div>
+            <div class="row">
+              <button id="btnCopyUrl" type="button">🔗 Copy Experiment URL</button>
+            </div>
+            <div class="grid-3col">
+              <a id="downloadTrajCsv" class="btn-link" href="/export/samples.csv" download>Traj CSV</a>
+              <a id="downloadMetricsCsv" class="btn-link" href="/export/metrics.csv" download>Metrics CSV</a>
+              <a id="downloadEventsCsv" class="btn-link" href="/export/events.csv" download>Events CSV</a>
+            </div>
+            <div id="stats" class="small">Waiting for data...</div>
+            <div id="logFile" class="small"></div>
+          </div>
+        </details>
+
+        <div style="display:none;">
+          <input id="randomWalkTurnRate" type="number" value="0.12" />
+          <input id="randomWalkSpeedJitter" type="number" value="0.12" />
+          <input id="humanSpawnRadius" type="number" value="7" />
+          <input id="botSpawnRadius" type="number" value="12" />
+          <button id="applyConfig" type="button">Apply</button>
+        </div>
+      </aside>
+
+      <main class="admin-main">
+        <div class="viz-top-grid">
+          <section class="panel viz-card god-card">
+            <div class="card-header">
+              <h2>God View — Arena &amp; Trajectories</h2>
+              <div class="god-toolbar">
+                <button type="button" id="btnMapGlobal" class="btn-pill active-cyan" title="Unwrapped world: straight motion stays straight">Global</button>
+                <button type="button" id="btnMapCell" class="btn-pill" title="Single periodic cell, trails break at the seam">Periodic cell</button>
+                <button type="button" id="btnShowClones" class="btn-pill active-amber" title="Faint outlines of mirrored copies, no extra trails">Clones: ON</button>
+                <button type="button" id="btnResetView" class="btn-pill" title="Recentre and reset zoom">Reset view</button>
+                <span class="small" id="godModeCaption">Unwrapped world metres. Scroll to zoom, drag to pan.</span>
+                <button type="button" id="btnToggleBotTrails" class="btn-pill active-amber" title="Turn Bot trajectories on or off">
+                  Bot Trajectories: ON
+                </button>
+                <button type="button" id="btnToggleHumanTrails" class="btn-pill active-cyan" title="Turn Student trajectories on or off">
+                  Student Trajectories: ON
+                </button>
+                <button type="button" id="btnHeaderClearTrails" class="btn-pill" title="Clear current trajectory lines">
+                  Clear
+                </button>
+              </div>
+            </div>
+            <canvas id="adminCanvas" width="820" height="470"></canvas>
+          </section>
+
+          <section class="panel viz-card polar-card">
+            <div class="card-header">
+              <h2>Polar (R, θ) Rose — Click/Drag to Set R &amp; θ</h2>
+              <span class="small">Radius = R (0 CRW → 1 Flow) · Angle = θ<sub>swarm</sub></span>
+            </div>
+            <canvas id="polarCanvas" width="330" height="330"></canvas>
+            <div class="polar-caption small">
+              Green vector = Target (R, θ<sub>swarm</sub>). Cyan = P<sub>humans</sub>, Amber = P<sub>bots</sub>.
+            </div>
+          </section>
+        </div>
+
+        <div class="viz-mid-grid">
+          <section class="panel viz-card">
+            <div class="card-header">
+              <h2>Time Series: Order Parameter Φ(t), Entrainment &amp; Dynamics</h2>
+              <div class="legend-inline">
+                <span class="legend-line cyan"></span> Φ<sub>humans</sub>(t)
+                <span class="legend-line amber"></span> Φ<sub>bots</sub>(t)
+                <span class="legend-line emerald"></span> Entrainment ⟨cos Δθ⟩
+                <span class="legend-line pink"></span> Oasis / Stop / Collide
+              </div>
+            </div>
+            <canvas id="metricsCanvas" width="740" height="230"></canvas>
+          </section>
+
+          <section class="panel viz-card crux-stack-card">
+            <div class="card-header">
+              <h2>Paper Crux: Heading Histogram P(θ − θ<sub>swarm</sub>)</h2>
+              <span class="small">1 peak = average · 2 peaks = split · flat = CRW</span>
+            </div>
+            <canvas id="cruxCanvas" width="420" height="195"></canvas>
+            <div class="card-header" style="margin-top:6px;">
+              <h2>Expected in the Model (Schematic Redraw)</h2>
+            </div>
+            <canvas id="expectedCanvas" width="420" height="165"></canvas>
+          </section>
+        </div>
+
+        <div class="viz-mid-grid">
+          <section class="panel viz-card">
+            <div class="card-header">
+              <h2>Speed and spread over time</h2>
+              <span class="small">Scroll to zoom, drag to pan, double-click to reset</span>
+            </div>
+            <canvas id="dynamicsCanvas" width="740" height="210"></canvas>
+          </section>
+          <section class="panel viz-card">
+            <div class="card-header">
+              <h2>Kept-trial distribution</h2>
+              <span class="small">Each dot is one take you chose to keep</span>
+            </div>
+            <canvas id="distCanvas" width="420" height="210"></canvas>
+          </section>
+        </div>
+
+        <section class="panel" id="trialPanel">
+          <div class="card-header">
+            <h2>Trials — repeat, drop the bad takes, keep the trend</h2>
+            <div class="plot-toolbar">
+              <input id="trialName" type="text" maxlength="48" placeholder="Trial name (optional)" />
+              <button type="button" id="btnTrialStart">● Record</button>
+              <button type="button" id="btnTrialStop">■ Stop &amp; keep</button>
+              <button type="button" id="btnTrialPlay" class="btn-pill">▶ Replay on god view</button>
+              <input id="playScrub" type="range" min="0" max="1000" value="0" />
+              <span class="small" id="playLabel">Live</span>
+              <a id="btnTrialsCsv" class="btn-link" href="/export/trials.csv">Trials CSV</a>
+              <a id="btnTrialsJson" class="btn-link" href="/export/trials.json">Raw JSON</a>
+            </div>
+          </div>
+          <div id="trialLiveLabel" class="trial-live"></div>
+          <div id="trialList" class="trial-list"></div>
+          <div class="card-header">
+            <h2>Repeat-trial order Φ(t), aligned to the start of each take</h2>
+            <span class="small">Thin lines = kept trials · thick line = their mean</span>
+          </div>
+          <canvas id="trialCanvas" width="1100" height="220"></canvas>
+        </section>
+
+        <details class="panel bottom-drawer" id="rosterDrawer">
+          <summary>Individual Fox Roster (N = 15), Scarf Colors, Roles &amp; Visibility Matrix A<sub>ij</sub></summary>
+          <div class="viz-bottom-grid" style="margin-top:10px;">
+            <section class="viz-card">
+              <div class="card-header">
+                <h2>Individual Fox Tagging, Scarves, Roles &amp; Damage</h2>
+                <span class="small">Customize any individual or trigger looming (⚡)</span>
+              </div>
+              <div id="rosterWrap" class="matrix-wrap" style="max-height:240px;"></div>
+            </section>
+
+            <section class="viz-card">
+              <div class="card-header">
+                <h2>Visibility Matrix A<sub>ij</sub> (Click to Toggle)</h2>
+                <button id="clearOverrides" type="button" class="btn-inline">Reset Overrides</button>
+              </div>
+              <div id="matrixWrap" class="matrix-wrap" style="max-height:240px;"></div>
+              <div style="display:none;">
+                <textarea id="overrides"></textarea>
+                <button id="applyOverrides" type="button"></button>
+              </div>
+            </section>
+          </div>
+        </details>
+      </main>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/admin.js"></script>
+  </body>
+</html>

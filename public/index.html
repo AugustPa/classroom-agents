@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Classroom Agents</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="join-gate" id="joinGate">
+      <form id="joinForm" class="join-card">
+        <h1>Collective behaviour lab</h1>
+        <p>Type your name or initials. The lecturer uses it as your label. Nothing else is asked.</p>
+        <label for="joinName">Name</label>
+        <input id="joinName" name="name" maxlength="18" autocomplete="nickname" required />
+        <label for="joinCode" id="joinCodeLabel">Join code</label>
+        <input id="joinCode" name="code" maxlength="40" autocomplete="off" required />
+        <button type="submit">Enter the field</button>
+        <p id="joinError" class="join-error"></p>
+      </form>
+    </div>
+    <canvas id="world3d"></canvas>
+    <div class="hud" id="hud" aria-hidden="true"></div>
+    <div class="task-banner is-hidden" id="taskBanner">
+      <div class="task-title" id="taskTitle"></div>
+      <div class="task-body" id="taskBody"></div>
+    </div>
+    <div class="damage-bar-wrap is-hidden" id="damageBarWrap">
+      <div class="damage-bar-header">
+        <span class="damage-bar-title" id="damageBarTitle">INTEGRITY</span>
+        <span class="damage-bar-stats" id="damageBarStats">SCORE 100 · DAMAGE 0 · 0 BUMPS</span>
+      </div>
+      <div class="damage-bar-track">
+        <div class="damage-bar-health" id="damageBarHealth" style="width: 100%"></div>
+        <div class="damage-bar-loss" id="damageBarLoss" style="width: 0%"></div>
+      </div>
+    </div>
+    <div class="help">
+      <span id="youName"></span>
+      Click: Lock mouse<br />
+      WASD / Arrows: Move<br />
+      Mouse: Look
+    </div>
+    <div class="crosshair">+</div>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "/vendor/three/three.module.js",
+          "three/addons/": "/vendor/three-addons/"
+        }
+      }
+    </script>
+    <script type="module" src="/app.js"></script>
+  </body>
+  </html>

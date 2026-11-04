@@ -1,0 +1,5 @@
+node_modules/
+logs/*.jsonl
+trials/
+.lecturer-key
+.DS_Store

@@ -1,0 +1,115 @@
+# Classroom collective behaviour
+
+Fifteen people, one shared field. Each student is an animal. They only see whoever the experiment allows, and the pattern you measure afterwards is the collective behaviour.
+
+This is a teaching lab for the canonical models: alignment and order, a forced choice between two headings, an informed minority, echo chambers, neighbour-based sensing, a looming threat, and finding a good patch that nobody can navigate to. The same world is the lecture and the dataset.
+
+<p align="center">
+  <img src="examples/posters/echo-with-bridge.png" alt="With a bridge, red and blue end on one heading" width="640">
+</p>
+
+**With a bridge, the two chambers become one march.** Blue holds near 30°. Red starts near 180° and is pulled across. Order ends near 1. [Video](examples/videos/echo-with-bridge.mp4)
+
+<p align="center">
+  <img src="examples/posters/echo-no-bridge.png" alt="Without a bridge, red and blue leave on opposite headings" width="640">
+</p>
+
+**Without a bridge, the chambers never meet.** Blue stays near 30°. Red settles near 180° and walks away. Order stays near 0.2. [Video](examples/videos/echo-no-bridge.mp4)
+
+<p align="center">
+  <img src="examples/posters/taxis-social.png" alt="A social group collects inside the slow patch" width="640">
+</p>
+
+**Social patch finding.** Everyone can see everyone else. Paths pile up inside the slow region. [Video](examples/videos/taxis-social.mp4)
+
+<p align="center">
+  <img src="examples/posters/taxis-solo.png" alt="Solitary walkers cover the field and only sometimes sit in the patch" width="640">
+</p>
+
+**Solitary patch finding.** Nobody can see anyone else. The same patch is there, but the paths stay spread across the field. [Video](examples/videos/taxis-solo.mp4)
+
+The four clips are real class runs, not a simulation of the students. The trajectories are in [`examples/replays/`](examples/replays/) and load into the dashboard on startup, unchecked, so they do not contaminate a new lecture’s average. Open the trial list and press **Replay**.
+
+## Run it
+
+Needs Node 20 or newer.
+
+```bash
+git clone https://github.com/pvnkmrksk/classroom-agents.git
+cd classroom-agents
+npm install
+npm start
+```
+
+- Students: [http://localhost:3000](http://localhost:3000) — name, then join code `matrex`
+- Lecturer: [http://localhost:3000/admin](http://localhost:3000/admin) — key `matrexvr`
+
+From another network, in a second terminal:
+
+```bash
+npm run public
+```
+
+Leave it open. It prints an `https://….trycloudflare.com` link. That link changes every time you start it. Students use the link plus `matrex`. You use the same link with `/admin` and `matrexvr`.
+
+If port 3000 is already taken:
+
+```bash
+lsof -ti :3000 | xargs kill -9
+pkill -f "cloudflared tunnel --url http://127.0.0.1:3000"
+npm run public
+```
+
+Students: click to lock the mouse, WASD or arrows to move, mouse to look. Hard-refresh (`Cmd+Shift+R`) after you update the server.
+
+The hour-by-hour lecture plan is [`LECTURE.md`](LECTURE.md). Handover notes for changing the software are [`AGENTS.md`](AGENTS.md).
+
+## What to press
+
+The buttons along the top of the dashboard are the canonical models. One click resets that experiment.
+
+| Button | What the class is doing | What you measure | Source |
+|---|---|---|---|
+| 1A Entrainment | Students see only a marching swarm. You set its order R and heading θ | Order Φ and entrainment to θ. High R locks the march; R = 0 is a meandering walk | Vicsek et al., Phys. Rev. Lett. (1995); Buhl et al., Science (2006) |
+| 1B Handoff | The swarm vanishes. Students see only each other | Does Φ hold, decay, or pick a new heading | Buhl et al., Science (2006) |
+| 2 Bifurcation | Two bot streams at ±Δθ/2 | One peak in the heading histogram means they averaged. Two peaks means they split | Couzin et al., Nature (2005) |
+| 3 Informed | Three students privately see a beacon. The rest are not told the direction | Does the hidden minority steer all fifteen | Couzin et al., Nature (2005) |
+| 4A Echo chambers | Blue sees only blue, red sees only red. One bridge can see both, or you remove the bridge | One shared heading, or two headings that never meet. The clips above are this | Network split in the same spirit as the two-choice model |
+| 4B Topological | Each student sees their k nearest neighbours, however far | Cohesion when the group is stretched, against a fixed radius | Ballerini et al., PNAS (2008) |
+| 5 Looming | One student sees a dive on a straight line and can step off it | Whether the neighbours bolt without seeing the threat | Looming / collision-detector tradition |
+| 6A / 6B Taxis | A patch slows everyone down. 6A can see each other. 6B can see no one | Who accumulates in the patch. The clips above are this | Berdahl et al., Science (2013) |
+| 7 Stop and go | An automatic pause just before a bump | Pause waves through the group | Ariel et al. (2014); Bazazi et al. (2008) |
+| 8 Avoid bumps | Contact costs integrity. Dead time is how long they stay down at zero | Whether alignment appears because crossing hurts | Bazazi et al. (2008); Romanczuk et al. (2009) |
+
+Φ is the Vicsek order parameter: 0 when headings are random, 1 when they agree. The polar rose is the direction they actually picked. The heading histogram is the crux plot for the choice experiments: one peak or two.
+
+**God view.** Global draws the unwrapped path, so a straight march is a straight line. Periodic cell is the single hex: trails stop at the seam, and clones are faint outlines. Scroll zooms, drag pans.
+
+**Trials.** Record, stop, uncheck a bad take, and the mean line is only the ones you kept. Raw JSON and Trials CSV download the shelf. A restart does not delete saved trials or the session log in `logs/`. It does drop whoever is connected and any take you had not stopped.
+
+## Replay and regenerate
+
+The example files:
+
+| Run | Replay | Video |
+|---|---|---|
+| Echo chambers, with a bridge | [`examples/replays/echo-with-bridge.json`](examples/replays/echo-with-bridge.json) | [`examples/videos/echo-with-bridge.mp4`](examples/videos/echo-with-bridge.mp4) |
+| Echo chambers, no bridge | [`examples/replays/echo-no-bridge.json`](examples/replays/echo-no-bridge.json) | [`examples/videos/echo-no-bridge.mp4`](examples/videos/echo-no-bridge.mp4) |
+| Patch finding, social | [`examples/replays/taxis-social.json`](examples/replays/taxis-social.json) | [`examples/videos/taxis-social.mp4`](examples/videos/taxis-social.mp4) |
+| Patch finding, solitary | [`examples/replays/taxis-solo.json`](examples/replays/taxis-solo.json) | [`examples/videos/taxis-solo.mp4`](examples/videos/taxis-solo.mp4) |
+
+Posters are in [`examples/posters/`](examples/posters/). To draw the videos again from a local trial shelf (`trials/lecture-trials.json`) you need `ffmpeg`:
+
+```bash
+npm run examples
+```
+
+## References
+
+- Vicsek, T., Czirók, A., Ben-Jacob, E., Cohen, I. and Shochet, O. Novel type of phase transition in a system of self-driven particles. *Physical Review Letters* (1995).
+- Buhl, J., Sumpter, D. J. T., Couzin, I. D., Hale, J. J., Despland, E., Miller, E. R. and Simpson, S. J. From disorder to order in marching locusts. *Science* (2006).
+- Couzin, I. D., Krause, J., Franks, N. R. and Levin, S. A. Effective leadership and decision-making in animal groups on the move. *Nature* (2005).
+- Ballerini, M., Cabibbo, N., Candelier, R., Cavagna, A., Cisbani, E., Giardina, I., Lecomte, V., Orlandi, A., Parisi, G., Procaccini, A., Viale, M. and Zdravkovic, V. Interaction ruling animal collective behavior depends on topological rather than metric distance: Evidence from a field study. *PNAS* (2008).
+- Berdahl, A., Torney, C. J., Ioannou, C. C., Faria, J. J. and Couzin, I. D. Emergent sensing of complex environments by mobile animal groups. *Science* (2013).
+- Bazazi, S., Buhl, J., Hale, J. J., Anstey, M. L., Sword, G. A., Simpson, S. J. and Couzin, I. D. Collective motion and cannibalism in locust migratory bands. *Current Biology* (2008).
+- Romanczuk, P., Couzin, I. D. and Schimansky-Geier, L. Collective motion due to individual escape and pursuit response. *Physical Review Letters* (2009).
