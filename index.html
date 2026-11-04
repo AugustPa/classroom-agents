@@ -65,6 +65,7 @@
       border-radius: 12px;
       display: block;
     }
+    #compare { margin-top: 12px; background: #10192c; }
     .clock { font-variant-numeric: tabular-nums; color: var(--gold); min-width: 9em; }
     code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; }
     pre {
@@ -87,11 +88,11 @@
 
   <h2>Echo chambers</h2>
   <video class="clip" autoplay muted loop playsinline src="examples/videos/echo-side-by-side.mp4" poster="examples/posters/echo-side-by-side.png"></video>
-  <p>Blue can see only blue, red only red. This bridge take is the other recording: blue, red, and the gold bridge hold one heading for the whole take. Without a bridge they finish on two headings.</p>
+  <p>Blue can see only blue, red only red. The bridge clip now starts when the chambers are switched on, about 14 seconds before the recording button, so it does not open mid-march. The line underneath is the order, Φ. It stays high with a bridge and falls apart without one.</p>
 
   <h2>Finding a patch</h2>
   <video class="clip" autoplay muted loop playsinline src="examples/videos/taxis-side-by-side.mp4" poster="examples/posters/taxis-side-by-side.png"></video>
-  <p>The solitary clip now starts at the beginning of that recording, when the 4 m patch is still empty. The median fox is inside at 39 seconds. At the end, 131 seconds, the group is still spread across the field. Social is unchanged: inside at 26 seconds, and stopped together by 36 seconds.</p>
+  <p>The line under the paths is how many foxes have not yet reached the patch. Social falls to the bottom. Solitary stays up. The solitary side starts with the circle empty. The median fox is inside at 39 seconds, and at 131 seconds the group is still spread. Social is stopped together by 36 seconds.</p>
 
   <h2>Scrub the same runs</h2>
   <p class="muted">Nothing you do here is uploaded. The trajectories are the saved class files, played locally in this tab.</p>
@@ -106,6 +107,7 @@
     <canvas id="c0" width="640" height="480"></canvas>
     <canvas id="c1" width="640" height="480"></canvas>
   </div>
+  <canvas id="compare" width="1100" height="180"></canvas>
   <p id="status" class="muted">Loading the class run…</p>
 
   <h2>Run the live class</h2>
@@ -305,7 +307,90 @@ function frame(now) {
     const end = replay.samples.at(-1).t;
     drawPanel(canvases[i], replay, spec.labels[i], Math.min(shown, end), shown);
   });
+  drawCompare();
   if (playing) requestAnimationFrame(frame);
+}
+
+function drawCompare() {
+  const canvas = document.getElementById("compare");
+  if (!canvas || !replays.length) return;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const w = canvas.clientWidth || 1100;
+  const h = 180;
+  canvas.width = Math.round(w * dpr);
+  canvas.height = Math.round(h * dpr);
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = "#10192c";
+  ctx.fillRect(0, 0, w, h);
+  const echo = pairKey === "echo";
+  const yMax = echo ? 1 : 13;
+  ctx.fillStyle = "#f8fafc";
+  ctx.font = "600 14px ui-sans-serif, system-ui, sans-serif";
+  ctx.fillText(echo ? "Order \u03a6" : "Still to arrive", 16, 22);
+  const padL = 48, padR = 16, padT = 36, padB = 24;
+  const pw = w - padL - padR, ph = h - padT - padB;
+  const colors = ["#fde68a", "#7dd3fc"];
+  ctx.font = "12px ui-sans-serif, system-ui, sans-serif";
+  replays.forEach((replay, i) => {
+    ctx.fillStyle = colors[i];
+    ctx.fillText(PAIRS[pairKey].labels[i], w - 180 + i * 90, 22);
+  });
+  ctx.strokeStyle = "#1e293b";
+  ctx.beginPath();
+  ctx.moveTo(padL, padT);
+  ctx.lineTo(padL, padT + ph);
+  ctx.lineTo(padL + pw, padT + ph);
+  ctx.stroke();
+  const X = (t) => padL + (Math.max(0, Math.min(spanMs, t)) / spanMs) * pw;
+  const Y = (v) => padT + (1 - Math.max(0, Math.min(yMax, v)) / yMax) * ph;
+  replays.forEach((replay, i) => {
+    const pts = replay._series || [];
+    ctx.beginPath();
+    let started = false;
+    let last = null;
+    for (const p of pts) {
+      if (p.t > shown) break;
+      const x = X(p.t), y = Y(p.v);
+      if (!started) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+      started = true;
+      last = p;
+    }
+    if (last && shown > last.t) ctx.lineTo(X(shown), Y(last.v));
+    ctx.strokeStyle = colors[i];
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  });
+  ctx.strokeStyle = "#fde68a";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(X(shown), padT);
+  ctx.lineTo(X(shown), padT + ph);
+  ctx.stroke();
+}
+
+function seriesFor(replay) {
+  if (replay.oasis) {
+    const arrived = new Set();
+    const pts = [];
+    for (const sample of replay.samples || []) {
+      const humans = (sample.agents || []).filter((agent) => agent.type !== "bot");
+      for (const agent of humans) {
+        if (Math.hypot(agent.x - replay.oasis.x, agent.y - replay.oasis.y) <= replay.oasis.r) arrived.add(agent.id);
+      }
+      if (!pts.length || sample.t - pts[pts.length - 1].t > 500) {
+        pts.push({ t: sample.t, v: Math.max(0, humans.length - arrived.size) });
+      }
+    }
+    return pts;
+  }
+  const pts = [];
+  for (const row of replay.metrics || []) {
+    if (!Number.isFinite(row.humanPolarization)) continue;
+    if (!pts.length || row.t - pts[pts.length - 1].t > 500) pts.push({ t: row.t, v: row.humanPolarization });
+  }
+  return pts;
 }
 
 async function loadReplay(url) {
@@ -314,6 +399,7 @@ async function loadReplay(url) {
   if (!res.ok) throw new Error(String(res.status));
   const replay = await res.json();
   replay._tracks = tracksOf(replay);
+  replay._series = seriesFor(replay);
   cache.set(url, replay);
   return replay;
 }
@@ -362,6 +448,13 @@ document.getElementById("showTaxis").addEventListener("click", () => showPair("t
 document.getElementById("showEcho").addEventListener("click", () => showPair("echo"));
 window.addEventListener("resize", () => { if (replays.length) frame(performance.now()); });
 showPair("taxis");
+document.querySelectorAll("video").forEach((video) => {
+  video.muted = true;
+  video.playsInline = true;
+  const start = () => video.play().catch(() => {});
+  if (video.readyState >= 2) start();
+  else video.addEventListener("canplay", start, { once: true });
+});
 </script>
 </body>
 </html>

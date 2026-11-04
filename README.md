@@ -2,29 +2,23 @@
 
 Fifteen people, one shared field. Each student is an animal. They only see whoever the experiment allows, and the pattern you measure afterwards is the collective behaviour.
 
-The stills below are the recordings. Under each one is the video, so the lines stay sharp.
+GitHub plays the loops below by itself. The [browser page](https://pvnkmrksk.github.io/classroom-agents/) plays the sharper video the same way, and the chart under each pair is there too.
 
-![First person, looking across the herd](examples/posters/fpv-herd.jpg)
+![First person, walking with the herd](examples/videos/fpv-herd.gif)
 
-<video src="https://raw.githubusercontent.com/pvnkmrksk/classroom-agents/main/examples/videos/fpv-herd.mp4" poster="examples/posters/fpv-herd.jpg" autoplay muted loop playsinline width="100%"></video>
+[First-person video](examples/videos/fpv-herd.mp4)
 
-[Play the first-person video](examples/videos/fpv-herd.mp4)
+![Echo chambers. Order stays high with a bridge and falls without one](examples/videos/echo-side-by-side.gif)
 
-![Echo chambers. With a bridge they hold one heading. Without a bridge they leave on two](examples/posters/echo-side-by-side.png)
+[Echo chambers video](examples/videos/echo-side-by-side.mp4)
 
-<video src="https://raw.githubusercontent.com/pvnkmrksk/classroom-agents/main/examples/videos/echo-side-by-side.mp4" poster="examples/posters/echo-side-by-side.png" autoplay muted loop playsinline width="100%"></video>
+**Echo chambers.** Blue sees only blue, red only red. The bridge clip starts when the chambers are switched on, 14 seconds before record, so it does not open mid-march. The line underneath is the order, Φ. It stays high with a bridge and breaks up without one.
 
-[Play the echo chambers video](examples/videos/echo-side-by-side.mp4)
+![Finding the patch. Social finishes. Solitary still has foxes left to arrive](examples/videos/taxis-side-by-side.gif)
 
-**Echo chambers.** Blue sees only blue, red only red. The bridge clip is the other recording: blue, red, and the gold bridge hold one heading for the whole take. Without a bridge they finish on two headings.
+[Patch-finding video](examples/videos/taxis-side-by-side.mp4)
 
-![Finding the patch. Social ends stopped in a 4 m circle. Solitary is still spread](examples/posters/taxis-side-by-side.png)
-
-<video src="https://raw.githubusercontent.com/pvnkmrksk/classroom-agents/main/examples/videos/taxis-side-by-side.mp4" poster="examples/posters/taxis-side-by-side.png" autoplay muted loop playsinline width="100%"></video>
-
-[Play the patch-finding video](examples/videos/taxis-side-by-side.mp4)
-
-**Finding a patch.** The patch is 4 m across. Solitary now starts at the beginning of that recording, when the circle is empty. The median fox is inside at **39 seconds**, and at **131 seconds** the group is still spread. Social is inside at **26 seconds** and stopped together by **36 seconds**.
+**Finding a patch.** The patch is 4 m across. The line underneath is how many foxes have not yet arrived. Social falls to the bottom by 36 seconds. Solitary starts with the circle empty, the median fox is inside at 39 seconds, and at 131 seconds several are still out and the group is spread.
 
 The clips are real class runs. The trajectories are in [`examples/replays/`](examples/replays/). They load into the dashboard on startup, unchecked, so they do not enter a new lecture’s average. Open the trial list and press **Replay**. On the [browser page](https://pvnkmrksk.github.io/classroom-agents/) you can play and scrub the same files without installing anything. Nothing you do there is uploaded.
 
@@ -89,9 +83,9 @@ The buttons along the top of the dashboard are the canonical models. One click r
 
 | Run | Replay | Video |
 |---|---|---|
-| First person |  | [`examples/videos/fpv-herd.mp4`](examples/videos/fpv-herd.mp4) |
-| Echo chambers, side by side |  | [`examples/videos/echo-side-by-side.mp4`](examples/videos/echo-side-by-side.mp4) |
-| Patch finding, side by side |  | [`examples/videos/taxis-side-by-side.mp4`](examples/videos/taxis-side-by-side.mp4) |
+| First person |  | [loop](examples/videos/fpv-herd.gif) · [video](examples/videos/fpv-herd.mp4) |
+| Echo chambers, side by side |  | [loop](examples/videos/echo-side-by-side.gif) · [video](examples/videos/echo-side-by-side.mp4) |
+| Patch finding, side by side |  | [loop](examples/videos/taxis-side-by-side.gif) · [video](examples/videos/taxis-side-by-side.mp4) |
 | Echo chambers, with a bridge | [`examples/replays/echo-with-bridge.json`](examples/replays/echo-with-bridge.json) | |
 | Echo chambers, no bridge | [`examples/replays/echo-no-bridge.json`](examples/replays/echo-no-bridge.json) | |
 | Patch finding, social | [`examples/replays/taxis-social.json`](examples/replays/taxis-social.json) | |
