@@ -77,7 +77,13 @@ const state = {
   lastMouseY: 0,
 };
 
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: !LOW_END, powerPreference: "high-performance" });
+const CAPTURE = URLP.get("capture") === "1";
+const renderer = new THREE.WebGLRenderer({
+  canvas,
+  antialias: !LOW_END,
+  powerPreference: "high-performance",
+  preserveDrawingBuffer: CAPTURE,
+});
 renderer.setPixelRatio(LOW_END ? 1 : Math.min(window.devicePixelRatio, 1.6));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -899,6 +905,7 @@ function ensureAgentVisual(agent) {
 }
 
 function syncAgents(agents) {
+  if (CAPTURE) window.__agents = agents;
   const visibleIds = new Set();
   const boundary = state.config.boundaryMode || "";
   if (boundary !== state.lastBoundary) {
@@ -1567,4 +1574,7 @@ fetch("/join-info")
 
 animate();
 window.__classroomState = state;
+if (CAPTURE) {
+  window.__grabFrame = () => renderer.domElement.toDataURL("image/jpeg", 0.72);
+}
 window.__classroomAgents = agentVisuals;

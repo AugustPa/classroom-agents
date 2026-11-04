@@ -15,8 +15,8 @@ const videoDir = path.join(root, "examples", "videos");
 const posterDir = path.join(root, "examples", "posters");
 const sourceFile = path.join(root, "trials", "lecture-trials.json");
 
-const W = 1280;
-const H = 720;
+let W = 1280;
+let H = 720;
 const FPS = 12;
 
 const SPECS = [
@@ -50,7 +50,7 @@ const SPECS = [
     sourceId: "4f5700f1",
     name: "Example — patch finding, social",
     title: "Patch finding, social",
-    blurb: "Everyone can see everyone else. The group collects in the slow patch and stays there. The recorded name was mistyped; the visibility rule is all.",
+    blurb: "Everyone can see everyone else. Record was already running for a few seconds before the walk, and the patch had just been placed, so the clock starts when most of them are moving. The median fox is in the patch at 10 seconds. Half the group is inside by 54 seconds, and they stay.",
     citation: "Berdahl et al., Science (2013). Social individuals accumulate where conditions are good without a map of the patch.",
     videoSeconds: 18,
     posterAt: 0.85,
@@ -63,7 +63,7 @@ const SPECS = [
     sourceId: "99128d2f",
     name: "Example — patch finding, solitary",
     title: "Patch finding, solitary",
-    blurb: "Nobody can see anyone else. The same patch is still there, but the paths stay scattered and occupancy comes and goes.",
+    blurb: "Nobody can see anyone else. The walk starts a few seconds after record. The median fox reaches the patch at 75 seconds, and half the group is inside only around 78 seconds. Occupancy then breaks up.",
     citation: "Berdahl et al., Science (2013), the asocial control. Individuals do not track the good region the way the group does.",
     videoSeconds: 18,
     posterAt: 0.85,
@@ -118,19 +118,60 @@ function minImage(ax, ay, bx, by, s) {
   return best;
 }
 
-function inferOasis(trial) {
-  const slow = [];
-  for (const sample of trial.samples || []) {
-    for (const agent of sample.agents || []) {
-      if (agent.type === "bot") continue;
-      if (Math.hypot(agent.vx || 0, agent.vy || 0) < 2.4) slow.push(agent);
+function fitOasis(trial) {
+  const metrics = trial.metrics || [];
+  const samples = trial.samples || [];
+  if (!metrics.length || !samples.length) return null;
+  const fracAt = (t) => {
+    let best = metrics[0];
+    let bestD = Infinity;
+    for (const row of metrics) {
+      const d = Math.abs(row.t - t);
+      if (d < bestD) { bestD = d; best = row; }
+    }
+    return Number(best.oasisFraction) || 0;
+  };
+  const picks = [];
+  const step = Math.max(1, Math.floor(samples.length / 70));
+  for (let i = 0; i < samples.length; i += step) {
+    const sample = samples[i];
+    if (sample.t < 8000) continue;
+    const agents = (sample.agents || []).filter((a) => a.type !== "bot");
+    if (agents.length) picks.push({ agents, target: fracAt(sample.t) });
+  }
+  if (picks.length < 8) return null;
+  let best = null;
+  const score = (x, y) => {
+    let err = 0;
+    for (const pick of picks) {
+      let inside = 0;
+      for (const agent of pick.agents) {
+        if (Math.hypot(agent.x - x, agent.y - y) <= 11) inside += 1;
+      }
+      const frac = inside / pick.agents.length;
+      err += (frac - pick.target) ** 2;
+    }
+    return err;
+  };
+  for (let x = 8; x <= 82; x += 2) {
+    for (let y = 4; y <= 66; y += 2) {
+      const err = score(x, y);
+      if (!best || err < best.err) best = { x, y, err };
     }
   }
-  if (slow.length < 20) return null;
-  const xs = slow.map((a) => a.x).sort((a, b) => a - b);
-  const ys = slow.map((a) => a.y).sort((a, b) => a - b);
-  const mid = (arr) => arr[Math.floor(arr.length / 2)];
-  return { x: mid(xs), y: mid(ys), r: 11 };
+  const cx = best.x;
+  const cy = best.y;
+  for (let x = cx - 2; x <= cx + 2; x += 0.2) {
+    for (let y = cy - 2; y <= cy + 2; y += 0.2) {
+      const err = score(x, y);
+      if (err < best.err) best = { x, y, err };
+    }
+  }
+  return {
+    x: Number(best.x.toFixed(2)),
+    y: Number(best.y.toFixed(2)),
+    r: 11,
+  };
 }
 
 function refreshReplays() {
@@ -159,10 +200,20 @@ function refreshReplays() {
       blurb: spec.blurb,
       citation: spec.citation,
       config: src.config || {},
-      oasis: spec.oasis ? inferOasis(src) : null,
+      oasis: spec.oasis ? fitOasis(src) : null,
       metrics: src.metrics || [],
       samples: src.samples || [],
     };
+    if (replay.oasis) {
+      const onset = movementOnset(replay);
+      const median = medianArrival(replay, onset);
+      const group = groupHalfArrival(replay, onset);
+      replay.clock = {
+        walkOnsetMs: Math.round(onset),
+        medianArrivalMs: median == null ? null : Math.round(median),
+        groupHalfMs: group == null ? null : Math.round(group),
+      };
+    }
     fs.writeFileSync(path.join(replayDir, spec.file), JSON.stringify(replay));
     console.log("wrote", spec.file, "samples", replay.samples.length);
   }
@@ -178,6 +229,7 @@ const FONT = {
   G: ["01111", "10000", "10000", "10011", "10001", "10001", "01111"],
   H: ["10001", "10001", "10001", "11111", "10001", "10001", "10001"],
   I: ["11111", "00100", "00100", "00100", "00100", "00100", "11111"],
+  K: ["10001", "10010", "10100", "11000", "10100", "10010", "10001"],
   L: ["10000", "10000", "10000", "10000", "10000", "10000", "11111"],
   M: ["10001", "11011", "10101", "10101", "10001", "10001", "10001"],
   N: ["10001", "11001", "10101", "10011", "10001", "10001", "10001"],
@@ -444,8 +496,9 @@ function renderReplay(replay, spec) {
       for (const p of track.pts) {
         if (p.t > t) break;
         const [x, y] = view.to(p.x, p.y);
-        if (prev && Math.hypot(x - prev[0], y - prev[1]) < 80) line(buf, prev[0], prev[1], x, y, rgb, 0.45);
-        prev = [x, y];
+        const jumped = prev && Math.hypot(p.x - prev.wx, p.y - prev.wy) > 4;
+        if (prev && !jumped) line(buf, prev.x, prev.y, x, y, rgb, 0.55);
+        prev = { x, y, wx: p.x, wy: p.y };
         track.now = p;
       }
     }
@@ -485,15 +538,229 @@ async function main() {
   fs.mkdirSync(videoDir, { recursive: true });
   fs.mkdirSync(posterDir, { recursive: true });
   refreshReplays();
-  for (const spec of SPECS) {
-    const file = path.join(replayDir, spec.file);
-    if (!fs.existsSync(file)) {
-      console.warn("skip missing", spec.file);
+  if (!process.env.SKIP_SINGLES) {
+    for (const spec of SPECS) {
+      const file = path.join(replayDir, spec.file);
+      if (!fs.existsSync(file)) {
+        console.warn("skip missing", spec.file);
+        continue;
+      }
+      const replay = JSON.parse(fs.readFileSync(file, "utf8"));
+      await renderReplay(replay, spec);
+    }
+  }
+  if (process.env.ONLY !== "taxis") {
+    await renderPair(
+      ["echo-with-bridge.json", "echo-no-bridge.json"],
+      ["WITH A BRIDGE", "NO BRIDGE"],
+      "echo-side-by-side",
+      "echo",
+      16,
+      { syncWalk: false, spanMs: 42000 },
+    );
+    await toGif("examples/videos/echo-side-by-side.mp4", "examples/videos/echo-side-by-side.gif", 960);
+  }
+  if (process.env.ONLY !== "echo") {
+    await renderPair(
+      ["taxis-social.json", "taxis-solo.json"],
+      ["SOCIAL", "SOLITARY"],
+      "taxis-side-by-side",
+      "taxis",
+      18,
+      { syncWalk: true, spanMs: 90000, posterAt: 0.62 },
+    );
+    await toGif("examples/videos/taxis-side-by-side.mp4", "examples/videos/taxis-side-by-side.gif", 960);
+  }
+}
+
+function movementOnset(replay) {
+  let streak = 0;
+  for (const sample of replay.samples || []) {
+    const humans = (sample.agents || []).filter((a) => a.type !== "bot");
+    const moving = humans.filter((a) => Math.hypot(a.vx || 0, a.vy || 0) > 1.2).length;
+    if (humans.length && moving / humans.length >= 0.45) streak += 1;
+    else streak = 0;
+    if (streak >= 3) return Math.max(0, sample.t - 600);
+  }
+  return 0;
+}
+
+function medianArrival(replay, onset) {
+  const oasis = replay.oasis;
+  if (!oasis) return null;
+  const first = {};
+  for (const sample of replay.samples || []) {
+    for (const agent of sample.agents || []) {
+      if (agent.type === "bot" || first[agent.id] != null) continue;
+      if (Math.hypot(agent.x - oasis.x, agent.y - oasis.y) <= oasis.r) first[agent.id] = sample.t;
+    }
+  }
+  const times = Object.values(first).map((t) => t - onset).filter((t) => t >= -500).sort((a, b) => a - b);
+  if (!times.length) return null;
+  return times[Math.floor(times.length / 2)];
+}
+
+function groupHalfArrival(replay, onset) {
+  let streak = 0;
+  for (const row of replay.metrics || []) {
+    if (row.t < onset + 1500) {
+      streak = 0;
       continue;
     }
-    const replay = JSON.parse(fs.readFileSync(file, "utf8"));
-    await renderReplay(replay, spec);
+    if ((Number(row.oasisFraction) || 0) >= 0.5) streak += 1;
+    else streak = 0;
+    if (streak >= 3) return row.t - onset;
   }
+  return null;
+}
+
+function paintPanel(buf, replay, specMode, tData, originX, originY, panelW, panelH, label, arrivalMs, groupMs, shownMs) {
+  const tracks = unwrapTracks(replay);
+  const savedW = W;
+  const savedH = H;
+  W = panelW;
+  H = panelH;
+  const local = makeFrame(panelW, panelH, [8, 14, 28]);
+  const view = viewOf(tracks, replay.oasis);
+  if (replay.oasis) {
+    const [cx, cy] = view.to(replay.oasis.x, replay.oasis.y);
+    fillCircle(local, cx, cy, replay.oasis.r * view.scale, [14, 165, 233], 0.28);
+    strokeCircle(local, cx, cy, replay.oasis.r * view.scale, [186, 230, 253]);
+  }
+  for (const track of tracks) {
+    const rgb = rgbOf({ scarfColor: track.scarf }, specMode);
+    let prev = null;
+    for (const p of track.pts) {
+      if (p.t > tData) break;
+      const [x, y] = view.to(p.x, p.y);
+      const jumped = prev && Math.hypot(p.x - prev.wx, p.y - prev.wy) > 4;
+      if (prev && !jumped) line(local, prev.x, prev.y, x, y, rgb, 0.6);
+      prev = { x, y, wx: p.x, wy: p.y };
+      track.now = p;
+    }
+  }
+  let inside = 0;
+  let n = 0;
+  for (const track of tracks) {
+    const p = track.now;
+    if (!p) continue;
+    n += 1;
+    if (replay.oasis && Math.hypot(p.x - replay.oasis.x, p.y - replay.oasis.y) <= replay.oasis.r) inside += 1;
+    const [x, y] = view.to(p.x, p.y);
+    arrow(local, x, y, p.heading, rgbOf({ scarfColor: p.scarf || track.scarf }, specMode));
+  }
+  W = savedW;
+  H = savedH;
+  for (let y = 0; y < panelH; y += 1) {
+    for (let x = 0; x < panelW; x += 1) {
+      const si = (y * panelW + x) * 3;
+      const di = ((originY + y) * W + (originX + x)) * 3;
+      buf[di] = local[si];
+      buf[di + 1] = local[si + 1];
+      buf[di + 2] = local[si + 2];
+    }
+  }
+  drawText(buf, label, originX + 16, originY + 14, 2, [241, 245, 249]);
+  if (replay.oasis) {
+    const pct = n ? Math.round((100 * inside) / n) : 0;
+    drawText(buf, `IN PATCH ${pct}%`, originX + 16, originY + panelH - 28, 2, [186, 230, 253]);
+    if (arrivalMs != null) {
+      const sec = Math.max(0, Math.round(arrivalMs / 1000));
+      const hit = shownMs >= arrivalMs;
+      drawText(buf, `MEDIAN IN ${sec} SEC`, originX + 16, originY + 40, 2, hit ? [253, 224, 71] : [203, 213, 225]);
+    }
+    if (groupMs != null) {
+      const sec = Math.max(0, Math.round(groupMs / 1000));
+      const hit = shownMs >= groupMs;
+      drawText(buf, `HALF THE GROUP ${sec} SEC`, originX + 16, originY + 64, 2, hit ? [253, 224, 71] : [148, 163, 184]);
+    }
+  }
+}
+
+function renderPair(files, labels, stem, mode, videoSeconds, options = {}) {
+  const replays = files.map((file) => JSON.parse(fs.readFileSync(path.join(replayDir, file), "utf8")));
+  const onsets = options.syncWalk ? replays.map(movementOnset) : replays.map(() => 0);
+  const arrivals = replays.map((replay, i) => medianArrival(replay, onsets[i]));
+  const groups = replays.map((replay, i) => groupHalfArrival(replay, onsets[i]));
+  const spanMs = options.spanMs || 70000;
+  const panelW = 760;
+  const panelH = 640;
+  const gap = 24;
+  W = panelW * 2 + gap + 48;
+  H = panelH + 120;
+  const frames = Math.round(videoSeconds * FPS);
+  const outPath = path.join(videoDir, `${stem}.mp4`);
+  const posterPath = path.join(posterDir, `${stem}.png`);
+  const ff = spawn("ffmpeg", [
+    "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", `${W}x${H}`, "-r", String(FPS), "-i", "-",
+    "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", outPath,
+  ], { stdio: ["pipe", "ignore", "pipe"] });
+  let ffErr = "";
+  ff.stderr.on("data", (d) => { ffErr += d.toString(); });
+  const done = new Promise((resolve, reject) => {
+    ff.on("error", reject);
+    ff.on("close", (code) => (code === 0 ? resolve() : reject(new Error(ffErr.slice(-400)))));
+  });
+  let poster = null;
+  for (let frame = 0; frame < frames; frame += 1) {
+    const shown = (frame / Math.max(1, frames - 1)) * spanMs;
+    const buf = makeFrame(W, H, [6, 10, 20]);
+    const clock = options.syncWalk
+      ? `${Math.round(shown / 1000)} SEC AFTER WALKING STARTS`
+      : `${Math.round(shown / 1000)} SEC`;
+    drawText(buf, clock, 24, 18, 2, [226, 232, 240]);
+    replays.forEach((replay, i) => {
+      paintPanel(
+        buf,
+        replay,
+        mode,
+        onsets[i] + shown,
+        24 + i * (panelW + gap),
+        56,
+        panelW,
+        panelH,
+        labels[i],
+        arrivals[i],
+        groups[i],
+        shown,
+      );
+    });
+    if (frame === Math.round(frames * (options.posterAt ?? 0.72))) poster = Buffer.from(buf);
+    ff.stdin.write(buf);
+  }
+  ff.stdin.end();
+  return done.then(() => new Promise((resolve, reject) => {
+    if (!poster) return resolve();
+    const png = spawn("ffmpeg", ["-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", `${W}x${H}`, "-i", "-", posterPath], { stdio: ["pipe", "ignore", "pipe"] });
+    png.on("error", reject);
+    png.on("close", (code) => (code === 0 ? resolve() : reject(new Error("sbs poster failed"))));
+    png.stdin.write(poster);
+    png.stdin.end();
+  })).then(() => console.log(
+    "rendered",
+    stem,
+    "onsets",
+    onsets.map((t) => Math.round(t / 100) / 10),
+    "arrivals",
+    arrivals.map((t) => (t == null ? null : Math.round(t / 100) / 10)),
+    "group",
+    groups.map((t) => (t == null ? null : Math.round(t / 100) / 10)),
+  ));
+}
+
+function toGif(mp4Rel, gifRel, scale) {
+  const mp4 = path.join(root, mp4Rel);
+  const gif = path.join(root, gifRel);
+  return new Promise((resolve, reject) => {
+    const ff = spawn("ffmpeg", [
+      "-y", "-i", mp4,
+      "-vf", `fps=10,scale=${scale}:-1:flags=lanczos,split[s0][s1];[s0]palettegen=stats_mode=diff:max_colors=96[p];[s1][p]paletteuse=dither=bayer:bayer_scale=3`,
+      gif,
+    ], { stdio: ["ignore", "ignore", "pipe"] });
+    let err = "";
+    ff.stderr.on("data", (d) => { err += d.toString(); });
+    ff.on("close", (code) => (code === 0 ? resolve(console.log("gif", gifRel)) : reject(new Error(err.slice(-400)))));
+  });
 }
 
 main().catch((err) => {

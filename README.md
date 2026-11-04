@@ -2,37 +2,25 @@
 
 Fifteen people, one shared field. Each student is an animal. They only see whoever the experiment allows, and the pattern you measure afterwards is the collective behaviour.
 
-This is a teaching lab for the canonical models: alignment and order, a forced choice between two headings, an informed minority, echo chambers, neighbour-based sensing, a looming threat, and finding a good patch that nobody can navigate to. The same world is the lecture and the dataset.
+The recordings below play by themselves. To scrub them, or to run the live class, see [the browser page](https://pvnkmrksk.github.io/classroom-agents/) and the run instructions further down. GitHub Pages can play these saved runs in the browser. It cannot host the live class, because fifteen students have to share one world.
 
-<p align="center">
-  <img src="examples/posters/echo-with-bridge.png" alt="With a bridge, red and blue end on one heading" width="640">
-</p>
+<img src="examples/videos/fpv-damage.gif" alt="First-person view of a fox moving with the others while the integrity bar falls" width="100%">
 
-**With a bridge, the two chambers become one march.** Blue holds near 30°. Red starts near 180° and is pulled across. Order ends near 1. [Video](examples/videos/echo-with-bridge.mp4)
+A fox among foxes. Every bump takes integrity off the bar across the top.
 
-<p align="center">
-  <img src="examples/posters/echo-no-bridge.png" alt="Without a bridge, red and blue leave on opposite headings" width="640">
-</p>
+<img src="examples/videos/echo-side-by-side.gif" alt="With a bridge the two chambers join. Without a bridge they leave on opposite headings" width="100%">
 
-**Without a bridge, the chambers never meet.** Blue stays near 30°. Red settles near 180° and walks away. Order stays near 0.2. [Video](examples/videos/echo-no-bridge.mp4)
+**Echo chambers.** Blue sees only blue, red sees only red. With one fox who can see both, red is pulled onto the blue heading. Without that bridge the two marches never meet.
 
-<p align="center">
-  <img src="examples/posters/taxis-social.png" alt="A social group collects inside the slow patch" width="640">
-</p>
+<img src="examples/videos/taxis-side-by-side.gif" alt="Social foxes reach the slow patch in about 10 seconds. Solitary foxes take about 75" width="100%">
 
-**Social patch finding.** Everyone can see everyone else. Paths pile up inside the slow region. [Video](examples/videos/taxis-social.mp4)
+**Finding a patch nobody can see.** The blue disc is the slow region. Record was already running before the walk, so the clock starts when most of them are moving: 4 seconds into the social take, 6 seconds into the solitary one. After that, the median social fox is in the patch at **10 seconds**, and half the group is inside by **54 seconds**. They stay. Alone, the median fox arrives at **75 seconds**, and half the group is inside only around **78 seconds**.
 
-<p align="center">
-  <img src="examples/posters/taxis-solo.png" alt="Solitary walkers cover the field and only sometimes sit in the patch" width="640">
-</p>
+The clips are real class runs. The trajectories are in [`examples/replays/`](examples/replays/). They load into the dashboard on startup, unchecked, so they do not enter a new lecture’s average. Open the trial list and press **Replay**. On the [browser page](https://pvnkmrksk.github.io/classroom-agents/) you can play and scrub the same files without installing anything. Nothing you do there is uploaded.
 
-**Solitary patch finding.** Nobody can see anyone else. The same patch is there, but the paths stay spread across the field. [Video](examples/videos/taxis-solo.mp4)
+## Run the live class
 
-The four clips are real class runs, not a simulation of the students. The trajectories are in [`examples/replays/`](examples/replays/) and load into the dashboard on startup, unchecked, so they do not contaminate a new lecture’s average. Open the trial list and press **Replay**.
-
-## Run it
-
-Needs Node 20 or newer.
+Needs Node 20 or newer. This is the part a static site cannot do: one server, fifteen students.
 
 ```bash
 git clone https://github.com/pvnkmrksk/classroom-agents.git
@@ -74,12 +62,12 @@ The buttons along the top of the dashboard are the canonical models. One click r
 | 1B Handoff | The swarm vanishes. Students see only each other | Does Φ hold, decay, or pick a new heading | Buhl et al., Science (2006) |
 | 2 Bifurcation | Two bot streams at ±Δθ/2 | One peak in the heading histogram means they averaged. Two peaks means they split | Couzin et al., Nature (2005) |
 | 3 Informed | Three students privately see a beacon. The rest are not told the direction | Does the hidden minority steer all fifteen | Couzin et al., Nature (2005) |
-| 4A Echo chambers | Blue sees only blue, red sees only red. One bridge can see both, or you remove the bridge | One shared heading, or two headings that never meet. The clips above are this | Network split in the same spirit as the two-choice model |
+| 4A Echo chambers | Blue sees only blue, red sees only red. One bridge can see both, or you remove the bridge | One shared heading, or two headings that never meet. The clip above is this | Network split in the same spirit as the two-choice model |
 | 4B Topological | Each student sees their k nearest neighbours, however far | Cohesion when the group is stretched, against a fixed radius | Ballerini et al., PNAS (2008) |
 | 5 Looming | One student sees a dive on a straight line and can step off it | Whether the neighbours bolt without seeing the threat | Looming / collision-detector tradition |
-| 6A / 6B Taxis | A patch slows everyone down. 6A can see each other. 6B can see no one | Who accumulates in the patch. The clips above are this | Berdahl et al., Science (2013) |
+| 6A / 6B Taxis | A patch slows everyone down. 6A can see each other. 6B can see no one | Who accumulates in the patch, and when. The clip above is this | Berdahl et al., Science (2013) |
 | 7 Stop and go | An automatic pause just before a bump | Pause waves through the group | Ariel et al. (2014); Bazazi et al. (2008) |
-| 8 Avoid bumps | Contact costs integrity. Dead time is how long they stay down at zero | Whether alignment appears because crossing hurts | Bazazi et al. (2008); Romanczuk et al. (2009) |
+| 8 Avoid bumps | Contact costs integrity. Dead time is how long they stay down at zero | Whether alignment appears because crossing hurts. The first clip is this | Bazazi et al. (2008); Romanczuk et al. (2009) |
 
 Φ is the Vicsek order parameter: 0 when headings are random, 1 when they agree. The polar rose is the direction they actually picked. The heading histogram is the crux plot for the choice experiments: one peak or two.
 
@@ -89,10 +77,11 @@ The buttons along the top of the dashboard are the canonical models. One click r
 
 ## Replay and regenerate
 
-The example files:
-
 | Run | Replay | Video |
 |---|---|---|
+| First person, collisions |  | [`examples/videos/fpv-damage.gif`](examples/videos/fpv-damage.gif) |
+| Echo chambers, side by side |  | [`examples/videos/echo-side-by-side.gif`](examples/videos/echo-side-by-side.gif) |
+| Patch finding, side by side |  | [`examples/videos/taxis-side-by-side.gif`](examples/videos/taxis-side-by-side.gif) |
 | Echo chambers, with a bridge | [`examples/replays/echo-with-bridge.json`](examples/replays/echo-with-bridge.json) | [`examples/videos/echo-with-bridge.mp4`](examples/videos/echo-with-bridge.mp4) |
 | Echo chambers, no bridge | [`examples/replays/echo-no-bridge.json`](examples/replays/echo-no-bridge.json) | [`examples/videos/echo-no-bridge.mp4`](examples/videos/echo-no-bridge.mp4) |
 | Patch finding, social | [`examples/replays/taxis-social.json`](examples/replays/taxis-social.json) | [`examples/videos/taxis-social.mp4`](examples/videos/taxis-social.mp4) |
@@ -103,6 +92,8 @@ Posters are in [`examples/posters/`](examples/posters/). To draw the videos agai
 ```bash
 npm run examples
 ```
+
+The patch circle in the taxis clip is the real slow region. It is fit to the occupancy the server logged, after the first few seconds, because record started before the walk and the patch had just been placed. Saved trial names do not match the condition: trust `visibilityRule` (`all` is social, `blind_solo` is solitary).
 
 ## References
 

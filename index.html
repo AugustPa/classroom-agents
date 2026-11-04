@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Classroom collective behaviour</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #070d18;
+      --card: #10192b;
+      --line: #243044;
+      --text: #e7eef8;
+      --muted: #9aabbf;
+      --gold: #fde68a;
+      --blue: #7dd3fc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 17px/1.5 ui-sans-serif, system-ui, sans-serif;
+    }
+    main { width: min(1120px, calc(100% - 32px)); margin: 0 auto; padding: 40px 0 72px; }
+    h1 { font-size: clamp(32px, 5vw, 52px); line-height: 1.05; letter-spacing: -0.03em; margin: 0 0 12px; }
+    h2 { font-size: 22px; margin: 36px 0 8px; }
+    p { margin: 0 0 12px; }
+    .muted { color: var(--muted); }
+    a { color: var(--blue); }
+    .full, .clip {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 12px;
+      background: #000;
+      margin: 14px 0 8px;
+    }
+    .row { display: grid; gap: 14px; }
+    @media (min-width: 900px) { .row { grid-template-columns: 1fr 1fr; } }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; }
+    button, .controls input[type="range"] { font: inherit; }
+    button {
+      background: #182338;
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 8px 14px;
+      cursor: pointer;
+    }
+    button.is-on { background: #1d4ed8; border-color: #1d4ed8; }
+    input[type="range"] { flex: 1; min-width: 160px; }
+    .stage { display: grid; gap: 12px; }
+    @media (min-width: 800px) { .stage { grid-template-columns: 1fr 1fr; } }
+    canvas {
+      width: 100%;
+      height: auto;
+      background: #080e1c;
+      border-radius: 12px;
+      display: block;
+    }
+    .clock { font-variant-numeric: tabular-nums; color: var(--gold); min-width: 9em; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; }
+    pre {
+      background: #0c1424;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px 16px;
+      overflow: auto;
+    }
+  </style>
+</head>
+<body>
+<main>
+  <p class="muted">Fifteen people, one field. Each student is a fox.</p>
+  <h1>Classroom collective behaviour</h1>
+  <p>This page plays real class runs in your browser. The live lecture, where fifteen students share one world, needs the small server below. GitHub Pages can only serve files, so it cannot host that shared world.</p>
+
+  <img class="full" src="examples/videos/fpv-damage.gif" alt="First-person view of a fox walking through other foxes while the integrity bar falls">
+  <p class="muted">First person. Contact with another fox lowers the bar across the top. The bar in this clip is the same readout the student sees, drawn on frames from the live view.</p>
+
+  <h2>Echo chambers</h2>
+  <img class="clip" src="examples/videos/echo-side-by-side.gif" alt="Side by side: with a bridge the two colours join, without a bridge they leave on opposite headings">
+  <p>Blue can see only blue, red only red. With one fox who can see both, the red march is pulled onto the blue heading. Without that bridge the two marches never meet.</p>
+
+  <h2>Finding a patch</h2>
+  <img class="clip" src="examples/videos/taxis-side-by-side.gif" alt="Side by side: the social group reaches the slow patch long before the solitary foxes">
+  <p>The slow patch is the blue disc. Nobody is told where it is. Record was already running before people walked, so the clock starts when most of them are moving: about 4 seconds into the social take and 6 seconds into the solitary one.</p>
+  <p>After that, the median social fox is in the patch at <strong>10 seconds</strong>, and half the group is inside by <strong>54 seconds</strong>. They stay. Alone, the median fox arrives at <strong>75 seconds</strong>, and half the group is inside only around <strong>78 seconds</strong>.</p>
+
+  <h2>Scrub the same runs</h2>
+  <p class="muted">Nothing you do here is uploaded. The trajectories are the saved class files, played locally in this tab.</p>
+  <div class="controls">
+    <button type="button" id="showTaxis" class="is-on">Patch finding</button>
+    <button type="button" id="showEcho">Echo chambers</button>
+    <button type="button" id="playBtn">Play</button>
+    <input id="scrub" type="range" min="0" max="1000" value="0">
+    <span class="clock" id="clock">0 sec</span>
+  </div>
+  <div class="stage">
+    <canvas id="c0" width="640" height="480"></canvas>
+    <canvas id="c1" width="640" height="480"></canvas>
+  </div>
+  <p id="status" class="muted">Loading the class run…</p>
+
+  <h2>Run the live class</h2>
+  <p>Fifteen students need one shared server. That part does not run on a static site.</p>
+  <pre><code>git clone https://github.com/pvnkmrksk/classroom-agents.git
+cd classroom-agents
+npm install
+npm start</code></pre>
+  <p>Students open <code>http://localhost:3000</code> and join with <code>matrex</code>. The lecturer opens <code>/admin</code> with <code>matrexvr</code>. From another network, <code>npm run public</code> prints a temporary link.</p>
+  <p>The lecture plan is <a href="LECTURE.md">LECTURE.md</a>. The model table and the papers are in the <a href="https://github.com/pvnkmrksk/classroom-agents">repository README</a>.</p>
+</main>
+<script>
+const PAIRS = {
+  taxis: {
+    files: ["examples/replays/taxis-social.json", "examples/replays/taxis-solo.json"],
+    labels: ["Social", "Solitary"],
+    span: 90000,
+    syncWalk: true,
+  },
+  echo: {
+    files: ["examples/replays/echo-with-bridge.json", "examples/replays/echo-no-bridge.json"],
+    labels: ["With a bridge", "No bridge"],
+    span: 42000,
+    syncWalk: false,
+  },
+};
+
+const canvases = [document.getElementById("c0"), document.getElementById("c1")];
+const statusEl = document.getElementById("status");
+const clockEl = document.getElementById("clock");
+const scrub = document.getElementById("scrub");
+const playBtn = document.getElementById("playBtn");
+const cache = new Map();
+let pairKey = "taxis";
+let replays = [];
+let shown = 0;
+let playing = false;
+let last = 0;
+
+function wrapLat(c) { return c - Math.floor(c + 0.5); }
+function minImage(ax, ay, bx, by, s) {
+  const rt3h = Math.sqrt(3) / 2;
+  const laV = ay / (s * rt3h);
+  const lbV = by / (s * rt3h);
+  const u0 = wrapLat((bx / s - lbV / 2) - (ax / s - laV / 2));
+  const v0 = wrapLat(lbV - laV);
+  let best = { x: bx - ax, y: by - ay, d: Infinity };
+  for (const [du, dv] of [[0, 0], [-1, 0], [1, 0], [0, -1], [0, 1], [-1, 1], [1, -1]]) {
+    const wx = s * (u0 + du + (v0 + dv) * 0.5);
+    const wy = s * rt3h * (v0 + dv);
+    const d = wx * wx + wy * wy;
+    if (d < best.d) best = { x: wx, y: wy, d };
+  }
+  return best;
+}
+function chamberOf(color) {
+  const hex = String(color || "");
+  const r = parseInt(hex.slice(1, 3), 16) || 0;
+  const g = parseInt(hex.slice(3, 5), 16) || 0;
+  const b = parseInt(hex.slice(5, 7), 16) || 0;
+  if (r > 180 && g > 140 && b < 120) return "#fbbf24";
+  if (b > r && b > 80) return "#60a5fa";
+  if (r > b && r > 100) return "#f87171";
+  return "#94a3b8";
+}
+function tracksOf(replay) {
+  const hex = replay.config && replay.config.boundaryMode === "hex_torus";
+  const spacing = Number(replay.config && replay.config.hexSpacing) || 24;
+  const echo = String(replay.preset || "").includes("echo") || (replay.config && replay.config.visibilityRule === "echo_chambers");
+  const tracks = new Map();
+  for (const sample of replay.samples || []) {
+    for (const agent of sample.agents || []) {
+      if (agent.type === "bot") continue;
+      let track = tracks.get(agent.id);
+      if (!track) {
+        track = { scarf: agent.scarfColor, canon: { x: agent.x, y: agent.y }, pts: [] };
+        tracks.set(agent.id, track);
+      }
+      let x = agent.x;
+      let y = agent.y;
+      if (hex && track.pts.length) {
+        const step = minImage(track.canon.x, track.canon.y, agent.x, agent.y, spacing);
+        const prev = track.pts[track.pts.length - 1];
+        x = prev.x + step.x;
+        y = prev.y + step.y;
+      }
+      track.canon = { x: agent.x, y: agent.y };
+      track.pts.push({ t: sample.t, x, y, heading: agent.heading || 0, color: echo ? chamberOf(agent.scarfColor) : (agent.scarfColor || "#94a3b8") });
+    }
+  }
+  return [...tracks.values()];
+}
+function viewOf(tracks, oasis, w, h) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const track of tracks) {
+    for (const p of track.pts) {
+      minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+      maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
+    }
+  }
+  if (oasis) {
+    minX = Math.min(minX, oasis.x - oasis.r); maxX = Math.max(maxX, oasis.x + oasis.r);
+    minY = Math.min(minY, oasis.y - oasis.r); maxY = Math.max(maxY, oasis.y + oasis.r);
+  }
+  minX -= 6; minY -= 6; maxX += 6; maxY += 6;
+  const plot = { l: 18, t: 46, r: w - 18, b: h - 36 };
+  const scale = Math.min((plot.r - plot.l) / Math.max(12, maxX - minX), (plot.b - plot.t) / Math.max(12, maxY - minY));
+  const ox = plot.l + ((plot.r - plot.l) - (maxX - minX) * scale) / 2;
+  const oy = plot.t + ((plot.b - plot.t) - (maxY - minY) * scale) / 2;
+  return { to: (x, y) => [ox + (x - minX) * scale, oy + (y - minY) * scale], scale };
+}
+
+function drawPanel(canvas, replay, label, tData, shownMs) {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const w = canvas.clientWidth || 640;
+  const h = Math.round(w * 0.72);
+  canvas.width = Math.round(w * dpr);
+  canvas.height = Math.round(h * dpr);
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = "#080e1c";
+  ctx.fillRect(0, 0, w, h);
+  const tracks = replay._tracks;
+  const view = viewOf(tracks, replay.oasis, w, h);
+  if (replay.oasis) {
+    const [cx, cy] = view.to(replay.oasis.x, replay.oasis.y);
+    ctx.beginPath();
+    ctx.fillStyle = "rgba(14,165,233,0.22)";
+    ctx.arc(cx, cy, replay.oasis.r * view.scale, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#bae6fd";
+    ctx.stroke();
+  }
+  ctx.lineWidth = 1.6;
+  let inside = 0;
+  let n = 0;
+  for (const track of tracks) {
+    ctx.beginPath();
+    let started = false;
+    let prev = null;
+    let now = null;
+    for (const p of track.pts) {
+      if (p.t > tData) break;
+      const jumped = prev && Math.hypot(p.x - prev.x, p.y - prev.y) > 4;
+      const [x, y] = view.to(p.x, p.y);
+      if (!started || jumped) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+      started = true;
+      prev = p;
+      now = p;
+    }
+    ctx.strokeStyle = (now && now.color) || "#94a3b8";
+    ctx.globalAlpha = 0.8;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    if (!now) continue;
+    n += 1;
+    if (replay.oasis && Math.hypot(now.x - replay.oasis.x, now.y - replay.oasis.y) <= replay.oasis.r) inside += 1;
+    const [x, y] = view.to(now.x, now.y);
+    const dx = Math.cos(now.heading) * 11;
+    const dy = Math.sin(now.heading) * 11;
+    ctx.strokeStyle = now.color;
+    ctx.beginPath();
+    ctx.moveTo(x - dx * 0.2, y - dy * 0.2);
+    ctx.lineTo(x + dx, y + dy);
+    ctx.stroke();
+    ctx.fillStyle = now.color;
+    ctx.beginPath();
+    ctx.arc(x, y, 3.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = "#f8fafc";
+  ctx.font = "600 14px ui-sans-serif, system-ui, sans-serif";
+  ctx.fillText(label, 16, 24);
+  const clock = replay.clock || {};
+  ctx.font = "13px ui-sans-serif, system-ui, sans-serif";
+  if (clock.medianArrivalMs != null) {
+    ctx.fillStyle = shownMs >= clock.medianArrivalMs ? "#fde68a" : "#cbd5e1";
+    ctx.fillText(`Median in ${Math.round(clock.medianArrivalMs / 1000)} sec`, 16, 44);
+  }
+  if (replay.oasis) {
+    ctx.fillStyle = "#bae6fd";
+    ctx.fillText(`In patch ${n ? Math.round(100 * inside / n) : 0}%`, 16, h - 14);
+  }
+}
+
+function frame(now) {
+  if (!replays.length) return;
+  if (playing) {
+    const dt = last ? Math.min(80, now - last) : 16;
+    const spec = PAIRS[pairKey];
+    shown += dt * 4;
+    if (shown >= spec.span) { shown = spec.span; playing = false; playBtn.textContent = "Play"; }
+    scrub.value = String(Math.round(1000 * shown / spec.span));
+  }
+  last = now;
+  const spec = PAIRS[pairKey];
+  clockEl.textContent = `${Math.round(shown / 1000)} sec`;
+  replays.forEach((replay, i) => {
+    const onset = spec.syncWalk && replay.clock ? replay.clock.walkOnsetMs : 0;
+    drawPanel(canvases[i], replay, spec.labels[i], onset + shown, shown);
+  });
+  if (playing) requestAnimationFrame(frame);
+}
+
+async function loadReplay(url) {
+  if (cache.has(url)) return cache.get(url);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(String(res.status));
+  const replay = await res.json();
+  replay._tracks = tracksOf(replay);
+  cache.set(url, replay);
+  return replay;
+}
+
+async function showPair(key) {
+  pairKey = key;
+  document.getElementById("showTaxis").classList.toggle("is-on", key === "taxis");
+  document.getElementById("showEcho").classList.toggle("is-on", key === "echo");
+  playing = false;
+  playBtn.textContent = "Play";
+  shown = 0;
+  scrub.value = "0";
+  statusEl.textContent = "Loading the class run…";
+  try {
+    replays = await Promise.all(PAIRS[key].files.map(loadReplay));
+    const bits = replays.map((replay, i) => {
+      const clock = replay.clock;
+      if (!clock || clock.medianArrivalMs == null) return PAIRS[key].labels[i];
+      return `${PAIRS[key].labels[i]}: median ${Math.round(clock.medianArrivalMs / 1000)} sec, half the group ${Math.round(clock.groupHalfMs / 1000)} sec`;
+    });
+    statusEl.textContent = bits.join("  ·  ");
+    last = 0;
+    frame(performance.now());
+  } catch (err) {
+    statusEl.textContent = "These runs load from the site. Open the published page rather than the file on disk.";
+  }
+}
+
+playBtn.addEventListener("click", () => {
+  const spec = PAIRS[pairKey];
+  if (shown >= spec.span) shown = 0;
+  playing = !playing;
+  playBtn.textContent = playing ? "Pause" : "Play";
+  last = 0;
+  if (playing) requestAnimationFrame(frame);
+});
+scrub.addEventListener("input", () => {
+  playing = false;
+  playBtn.textContent = "Play";
+  shown = (Number(scrub.value) / 1000) * PAIRS[pairKey].span;
+  last = 0;
+  frame(performance.now());
+});
+document.getElementById("showTaxis").addEventListener("click", () => showPair("taxis"));
+document.getElementById("showEcho").addEventListener("click", () => showPair("echo"));
+window.addEventListener("resize", () => { if (replays.length) frame(performance.now()); });
+showPair("taxis");
+</script>
+</body>
+</html>
