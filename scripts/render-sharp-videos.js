@@ -253,7 +253,7 @@ function buildPatchReplays() {
   const socialSrc = byId("28bccc16");
   const soloSrc = byId("4f5700f1");
   const socialSlice = sliceTrial(socialSrc, 18000, socialSrc.samples.at(-1).t);
-  const soloSlice = sliceTrial(soloSrc, 25000, soloSrc.samples.at(-1).t);
+  const soloSlice = sliceTrial(soloSrc, 0, soloSrc.samples.at(-1).t);
   const social = {
     id: "example-taxis-social",
     name: "Example — patch finding, social",
@@ -281,7 +281,7 @@ function buildPatchReplays() {
     kept: false,
     preset: "expt6_taxis",
     title: "Patch finding, solitary",
-    blurb: "The last solitary take, after the patch was set to 4 m. A few foxes reach it. The group is still spread at the end of the recording.",
+    blurb: "The last solitary take, from the start of the recording. The 4 m patch is empty at the beginning. A few foxes reach it later. The group is still spread at the end.",
     citation: "Berdahl et al., Science (2013), the asocial control.",
     config: { ...soloSrc.config, visibilityRule: "blind_solo", boundaryMode: "reflective" },
     oasis: { x: 52.5, y: 20.5, r: 4 },
@@ -302,15 +302,46 @@ function buildPatchReplays() {
 }
 
 function loadEcho() {
-  const load = (file, mode) => {
-    const replay = JSON.parse(fs.readFileSync(path.join(replayDir, file), "utf8"));
-    replay.mode = mode;
-    replay._tracks = tracksOf(replay, mode === "echo");
+  const shelf = JSON.parse(fs.readFileSync(shelfPath, "utf8"));
+  const byId = (id) => shelf.trials.find((t) => t.id.startsWith(id));
+  const write = (src, meta) => {
+    const replay = {
+      id: meta.id,
+      name: meta.name,
+      example: true,
+      kept: false,
+      preset: src.preset,
+      title: meta.title,
+      blurb: meta.blurb,
+      citation: meta.citation,
+      config: src.config || {},
+      oasis: null,
+      metrics: src.metrics || [],
+      samples: src.samples || [],
+      mode: "echo",
+    };
+    fs.writeFileSync(path.join(replayDir, meta.file), JSON.stringify(replay));
+    replay._tracks = tracksOf(replay, true);
+    console.log("echo", meta.file, replay.samples.length, "dur", replay.samples.at(-1).t);
     return replay;
   };
   return {
-    bridge: load("echo-with-bridge.json", "echo"),
-    none: load("echo-no-bridge.json", "echo"),
+    bridge: write(byId("89fa7291"), {
+      file: "echo-with-bridge.json",
+      id: "example-echo-bridge",
+      name: "Example — echo chambers, with a bridge",
+      title: "Echo chambers, with a bridge",
+      blurb: "The other bridge take. Blue, red, and the gold bridge hold one heading for the whole recording.",
+      citation: "Classroom network demo. The bridge is the extra link between the two chambers.",
+    }),
+    none: write(byId("5c3ffa80"), {
+      file: "echo-no-bridge.json",
+      id: "example-echo-nobridge",
+      name: "Example — echo chambers, no bridge",
+      title: "Echo chambers, no bridge",
+      blurb: "Blue and red leave on opposite headings and stay there. Nobody can see the other chamber.",
+      citation: "Same hidden split, without a bridge.",
+    }),
   };
 }
 
@@ -327,17 +358,17 @@ async function main() {
   const top = 96;
   const box = (i) => ({ x: 56 + i * (panelW + gap), y: top, w: panelW, h: panelH });
 
-  const echoEnd = 52000;
-  await renderClip("echo-side-by-side", 12, (u) => {
+  const echoEnd = 60000;
+  await renderClip("echo-side-by-side", 14, (u) => {
     const shown = u * echoEnd;
     return frameSvg("Echo chambers", `${Math.round(shown / 1000)} s`, [
-      { replay: echo.bridge, label: "With a bridge", note: "Red is pulled onto the blue heading", t: timeAt(echo.bridge, shown), box: box(0) },
+      { replay: echo.bridge, label: "With a bridge", note: "One heading, held for the whole take", t: timeAt(echo.bridge, shown), box: box(0) },
       { replay: echo.none, label: "No bridge", note: "The two headings never meet", t: timeAt(echo.none, shown), box: box(1) },
     ]);
   });
 
   const soloEnd = solo.samples.at(-1).t;
-  await renderClip("taxis-side-by-side", 16, (u) => {
+  await renderClip("taxis-side-by-side", 18, (u) => {
     const shown = u * soloEnd;
     const socialT = timeAt(social, shown);
     const socialNote = socialT >= 36000 ? "Stopped together in the 4 m patch" : "Everyone can see everyone";
