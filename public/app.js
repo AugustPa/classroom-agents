@@ -78,14 +78,16 @@ const state = {
 };
 
 const CAPTURE = URLP.get("capture") === "1";
+const AUTOLOOK = CAPTURE && URLP.get("autolook") === "1";
+const RECORD_FPV = CAPTURE && URLP.get("record") === "1";
 const renderer = new THREE.WebGLRenderer({
   canvas,
   antialias: !LOW_END,
   powerPreference: "high-performance",
   preserveDrawingBuffer: CAPTURE,
 });
-renderer.setPixelRatio(LOW_END ? 1 : Math.min(window.devicePixelRatio, 1.6));
-renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(CAPTURE ? 1 : LOW_END ? 1 : Math.min(window.devicePixelRatio, 1.6));
+renderer.setSize(CAPTURE ? 1600 : window.innerWidth, CAPTURE ? 900 : window.innerHeight, !CAPTURE);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
@@ -94,7 +96,7 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 700);
+const camera = new THREE.PerspectiveCamera(62, CAPTURE ? 1600 / 900 : window.innerWidth / window.innerHeight, 0.1, 700);
 camera.rotation.order = "YXZ";
 camera.position.set(state.world.width / 2, 1.7, state.world.height / 2);
 
@@ -993,6 +995,7 @@ function syncAgents(agents) {
 }
 
 function onResize() {
+  if (CAPTURE) return;
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -1110,6 +1113,7 @@ socket.on("world", (payload) => {
   if (payload.config && typeof payload.config === "object") {
     state.config = { ...state.config, ...payload.config };
   }
+  if (CAPTURE) state.config.showScarves = false;
   if (payload.instruction) {
     const prevTitle = state.instruction.title;
     state.instruction = payload.instruction;
@@ -1214,6 +1218,29 @@ function animate(nowMs = performance.now()) {
   requestAnimationFrame(animate);
   const dt = Math.min(0.08, Math.max(0.001, (nowMs - lastFrameMs) / 1000));
   lastFrameMs = nowMs;
+
+  if (CAPTURE) state.config.showScarves = false;
+  if (AUTOLOOK) {
+    let sx = 0;
+    let sy = 0;
+    let n = 0;
+    for (const entry of agentVisuals.values()) {
+      if (entry.id === state.you) continue;
+      const sp = entry.targetVel.length();
+      if (sp < 0.25) continue;
+      sx += entry.targetVel.x;
+      sy += entry.targetVel.y;
+      n += 1;
+    }
+    if (n > 0) {
+      const heading = Math.atan2(sy, sx);
+      // Camera yaw 0 looks down −Z. Match aim = atan2(forward.z, forward.x) to the herd heading.
+      state.look.yaw = Math.atan2(-Math.cos(heading), -Math.sin(heading));
+      state.look.pitch = -0.08;
+      state.input.up = true;
+      state.input.down = false;
+    }
+  }
 
   camera.rotation.y = state.look.yaw;
   camera.rotation.x = state.look.pitch;
@@ -1442,6 +1469,10 @@ function animate(nowMs = performance.now()) {
     );
     // Fox stays full size (no close-range shrinking) and disappears when you collide with it (camDistXZ <= collideR)
     entry.mesh.visible = entry.id !== state.you && camDistXZ > collideR;
+    if (CAPTURE && speed > 0.35) {
+      entry.targetHeading = Math.atan2(entry.targetVel.y, entry.targetVel.x);
+      entry.walkDirSign = 1;
+    }
     const targetY = -entry.targetHeading;
     const yawDelta = shortestAngleDelta(entry.mesh.rotation.y, targetY);
     entry.mesh.rotation.y += yawDelta * rotLerp;
@@ -1459,13 +1490,14 @@ function animate(nowMs = performance.now()) {
     entry.smoothScale += (entry.targetScale - entry.smoothScale) * posLerp;
     entry.mesh.scale.setScalar(Math.max(0.001, entry.smoothScale));
 
-    if (speed > 0.35) {
+    if (speed > 0.35 && !CAPTURE) {
       const faceX = Math.cos(entry.targetHeading);
       const faceZ = Math.sin(entry.targetHeading);
       const forwardDot = entry.targetVel.x * faceX + entry.targetVel.y * faceZ;
       if (forwardDot < -0.25) entry.walkDirSign = -1;
       else if (forwardDot > 0.15) entry.walkDirSign = 1;
     }
+    if (CAPTURE) entry.walkDirSign = 1;
     const walkTimeScale = entry.walkDirSign * 1.15;
 
     if (entry.mixer) {
@@ -1574,7 +1606,53 @@ fetch("/join-info")
 
 animate();
 window.__classroomState = state;
-if (CAPTURE) {
-  window.__grabFrame = () => renderer.domElement.toDataURL("image/jpeg", 0.72);
-}
 window.__classroomAgents = agentVisuals;
+if (CAPTURE) {
+  state.config.showScarves = false;
+  for (const id of ["hud", "taskBanner", "damageBarWrap", "joinGate"]) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "none";
+  }
+  document.querySelectorAll(".help, .crosshair").forEach((el) => {
+    el.style.display = "none";
+  });
+  window.__grabFrame = () => renderer.domElement.toDataURL("image/jpeg", 0.92);
+  connectStudent("Herd", "matrex");
+}
+if (RECORD_FPV) {
+  const startRec = () => {
+    const stream = canvas.captureStream(30);
+    const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+      ? "video/webm;codecs=vp9"
+      : "video/webm";
+    const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6_000_000 });
+    const chunks = [];
+    rec.ondataavailable = (e) => {
+      if (e.data && e.data.size) chunks.push(e.data);
+    };
+    rec.onstop = async () => {
+      const blob = new Blob(chunks, { type: "video/webm" });
+      try {
+        await fetch("http://127.0.0.1:8799/fpv", { method: "POST", body: blob });
+        window.__fpvDone = blob.size;
+      } catch (err) {
+        window.__fpvDone = String(err);
+      }
+    };
+    rec.start(250);
+    window.__fpvRec = rec;
+    const stopAt = performance.now() + 16000;
+    const tick = () => {
+      if (!window.__fpvRec || window.__fpvRec.state !== "recording") return;
+      window.__fpvMs = Math.round(performance.now() - (stopAt - 16000));
+      if (performance.now() >= stopAt) window.__fpvRec.stop();
+      else requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  };
+  const waitReady = () => {
+    if (window.__classroomAgents && window.__classroomAgents.size > 4) setTimeout(startRec, 3000);
+    else setTimeout(waitReady, 200);
+  };
+  waitReady();
+}
