@@ -976,3 +976,20 @@ td.no {
   background: rgba(239, 68, 68, 0.2);
   color: #fecaca;
 }
+
+/* The goal reward belongs only to the participant who reached a cylinder. */
+.rainbow-reward {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 90ms ease, visibility 90ms;
+}
+.rainbow-reward.is-active { opacity: 0.65; visibility: visible; }
+.rainbow-reward svg { width: 100%; height: 100%; display: block; }
+@media (prefers-reduced-motion: reduce) {
+  .rainbow-reward { transition: none; }
+}

@@ -82,6 +82,16 @@ Students: click to lock the mouse, WASD or arrows to move, mouse to look. Hard-r
 
 The hour-by-hour lecture plan is [`LECTURE.md`](LECTURE.md). Handover notes for changing the software are [`AGENTS.md`](AGENTS.md).
 
+## Cylinder bifurcation (solo)
+
+Open `/admin` and choose **2C: Cylinder bifurcation (Solo)**. Each participant sees two stationary black vertical cylinders and no other players or bots. Everyone starts at the same position, facing the midpoint between the targets. The lecturer still sees all trajectories.
+
+Use **Bifurcation Split Δθ** and the direction control to position the targets. Cylinder distance, radius and height are adjustable (defaults: 120 m from the start, 2 m radius, 12 m tall). The default targets are about 25 m apart, appearing roughly 12° apart initially. Increasing distance alone preserves their physical spacing and reduces the starting angle. Distance is adjustable from 8–500 m; the open arena lets players reach distant targets. Targets remain fixed in world space while players walk; walking into either target briefly flashes a translucent, text-free rainbow (450 ms) and returns that player to the common start. Held movement keys, velocity and viewing direction carry through the reset without a pause. Other players are unaffected. Each arrival is recorded as a `cylinder_goal` event (player, target, and experiment settings). Wide angles require looking left/right. At 0° the targets overlap.
+
+After setting each condition, press **Reset Positions** and record a new trial using the existing trial controls. Compare initial headings and paths across angles; the live heading plot uses bearings from the starting point, not continuously updated target bearings. No directional instruction is shown to participants. This tests individual responses to two targets, and does not assume a bifurcation will occur.
+
+A shareable setup is `/admin?preset=expt2_cylinders&swarmSplitAngleDeg=12&cylinderDistance=120&cylinderRadius=2&cylinderHeight=12`. The original fox swarm experiment remains available as **2: Bifurcation**.
+
 ## What to press
 
 The buttons along the top of the dashboard are the canonical models. One click resets that experiment.

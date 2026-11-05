@@ -4,6 +4,8 @@ const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
 const { Server } = require("socket.io");
+const { firstCylinderHit } = require("./lib/cylinder-goals");
+const CYLINDER_REWARD_MS = 450;
 
 const PORT = Number(process.env.PORT || 3000);
 const lecturerKey = String(process.env.LECTURE_KEY || "matrexvr");
@@ -43,6 +45,10 @@ const DEFAULT_TUNING = {
   swarmDirectionDeg: 0, // 0 deg = +X (East), 90 deg = +Z (South)
   swarmR: 0.96, // resultant vector length R in [0, 1] for Biased Correlated Random Walk (0 = isotropic CRW, 1 = locked flow)
   swarmSplitAngleDeg: 70, // for bifurcating_swarm: two streams at +/- splitAngle/2
+  cylinderDistance: 120, // metres from the common start
+  cylinderRadius: 2,
+  cylinderHeight: 12,
+  cylinderTrialRevision: 0,
   swarmNoise: 0.08, // angular noise (synced with swarmR)
   swarmAlignStrength: 0.35,
   boundaryMode: "hex_torus", // hex_torus (infinite mirrored swarm) | open_flow | periodic | reflective
@@ -503,7 +509,38 @@ function applyBoundary(agent) {
   }
 }
 
+function isCylinderExperiment() {
+  return experiment.activePreset === "expt2_cylinders";
+}
+
+function cylinderStimuli() {
+  if (!isCylinderExperiment()) return [];
+  const base = experiment.swarmDirectionDeg * Math.PI / 180;
+  const halfSplit = experiment.swarmSplitAngleDeg * Math.PI / 360;
+  return [-1, 1].map((branch) => ({
+    id: branch < 0 ? "cylinder-a" : "cylinder-b",
+    x: WORLD.width / 2 + Math.cos(base + branch * halfSplit) * experiment.cylinderDistance,
+    y: WORLD.height / 2 + Math.sin(base + branch * halfSplit) * experiment.cylinderDistance,
+    radius: experiment.cylinderRadius,
+    height: experiment.cylinderHeight,
+  }));
+}
+
+function enforceCylinderSetup() {
+  if (!isCylinderExperiment()) return;
+  Object.assign(experiment, {
+    phase: "humans_only", botCount: 0, matchBotsToHumans: false,
+    boundaryMode: "open_flow", visibilityRule: "blind_solo",
+    oasisEnabled: false, stopAndGoEnabled: false, collisionScoreEnabled: false,
+    informedCount: 0,
+  });
+  assignInformedRoles(0);
+}
+
 function spawnPointFor(type, centerOverride = null) {
+  if (type === "human" && isCylinderExperiment()) {
+    return { x: WORLD.width / 2, y: WORLD.height / 2 };
+  }
   if (experiment.boundaryMode === "hex_torus" && !centerOverride) {
     const pts = hexSpawnPoints(40);
     return pts[Math.floor(Math.random() * pts.length)];
@@ -554,6 +591,9 @@ function newAgent(id, type, centerOverride = null) {
     stopStartedAt: 0,
     stopUntil: 0,
     goUntil: 0,
+    cylinderGoalSequence: 0,
+    cylinderRewardUntil: 0,
+    cylinderLastTarget: null,
     lastBumpByPeer: new Map(),
     x: spawn.x,
     y: spawn.y,
@@ -569,10 +609,14 @@ function newAgent(id, type, centerOverride = null) {
   if (type === "bot" && (experiment.botModel === "directed_swarm" || experiment.botModel === "bifurcating_swarm")) {
     agent.heading = initialBotHeadingForR(agent);
   }
+  if (type === "human" && isCylinderExperiment()) {
+    agent.heading = experiment.swarmDirectionDeg * Math.PI / 180;
+  }
   return agent;
 }
 
 function effectiveTargetBotCount() {
+  if (isCylinderExperiment()) return 0;
   if (experiment.matchBotsToHumans) {
     if (humans.size >= 2) {
       return humans.size - 1;
@@ -624,10 +668,42 @@ function assignEchoChambers(colorByGroup = false) {
   }
 }
 
+function resetCylinderPlayer(agent, keepWalking = false) {
+  agent.x = WORLD.width / 2;
+  agent.y = WORLD.height / 2;
+  if (keepWalking) return;
+  agent.vx = 0; agent.vy = 0; agent.angVel = 0;
+  agent.heading = experiment.swarmDirectionDeg * Math.PI / 180;
+  agent.pitch = 0;
+  inputs.set(agent.id, { up: false, down: false, left: false, right: false, aim: agent.heading, pitch: 0 });
+}
+
+function rewardCylinderGoal(agent, target, now) {
+  const reachedAt = { x: agent.x, y: agent.y };
+  agent.cylinderGoalSequence += 1;
+  agent.cylinderRewardUntil = now + CYLINDER_REWARD_MS;
+  agent.cylinderLastTarget = target.id;
+  writeLog("cylinder_goal", {
+    agentId: agent.id, tag: agent.tag, targetId: target.id,
+    sequence: agent.cylinderGoalSequence, reachedAt, target,
+    config: configSnap(),
+  });
+  resetCylinderPlayer(agent, true);
+}
+
 function resetAllPositions(options = {}) {
   const cx = WORLD.width / 2;
   const cy = WORLD.height / 2;
   const center = { x: cx, y: cy };
+  if (isCylinderExperiment()) {
+    experiment.cylinderTrialRevision += 1;
+    for (const h of humans.values()) {
+      resetCylinderPlayer(h);
+      h.cylinderRewardUntil = 0;
+    }
+    writeLog("reset_positions", { config: { ...experiment }, stimuli: cylinderStimuli() });
+    return;
+  }
   if (experiment.boundaryMode === "hex_torus") {
     const all = [...humans.values(), ...bots.values()];
     const pts = hexSpawnPoints(Math.max(20, all.length));
@@ -765,6 +841,8 @@ function defaultVisibility(observer, target) {
 }
 
 function canSee(observer, target) {
+  // Isolation is part of this protocol, including when a lecturer edits visibility overrides.
+  if (isCylinderExperiment() && observer.type === "human") return observer.id === target.id;
   const observerOverride = visibilityOverrides.get(observer.id);
   if (observerOverride && observerOverride.has(target.id)) {
     return observerOverride.get(target.id);
@@ -939,6 +1017,7 @@ function beginKnockout(agent, now) {
 }
 
 function updateHuman(agent, dt, now, allAgents) {
+  const previousPosition = { x: agent.x, y: agent.y };
   reviveIfReady(agent, now);
   if (isKnockedOut(agent, now)) {
     agent.vx = 0;
@@ -983,6 +1062,10 @@ function updateHuman(agent, dt, now, allAgents) {
   agent.y += agent.vy * dt;
   agent.inOasis = isInsideOasis(agent.x, agent.y);
   applyBoundary(agent);
+  if (isCylinderExperiment()) {
+    const target = firstCylinderHit(previousPosition, agent, cylinderStimuli());
+    if (target) rewardCylinderGoal(agent, target, now);
+  }
 }
 
 function updateBot(agent, dt, now, allBots, allAgents) {
@@ -1424,6 +1507,11 @@ function participantPayload(observer) {
     informedTargetDeg: isInformed ? experiment.swarmDirectionDeg : null,
     activePreset: experiment.activePreset,
     instruction: instructionFor(observer),
+    stimuli: cylinderStimuli(),
+    cylinderTrialRevision: experiment.cylinderTrialRevision,
+    cylinderGoalSequence: observer.cylinderGoalSequence,
+    cylinderRewardRemainingMs: isCylinderExperiment() ? Math.max(0, observer.cylinderRewardUntil - Date.now()) : 0,
+    cylinderStartHeading: isCylinderExperiment() ? experiment.swarmDirectionDeg : null,
     config: {
       phase: experiment.phase,
       activePreset: experiment.activePreset,
@@ -1472,6 +1560,7 @@ function pushAdminState(latestMetrics) {
     world: WORLD,
     logFile,
     lastStartleAt,
+    stimuli: cylinderStimuli(),
     config: { ...experiment },
     counts: {
       humans: humans.size,
@@ -1582,6 +1671,9 @@ function configSnap() {
     swarmR: experiment.swarmR,
     swarmDirectionDeg: experiment.swarmDirectionDeg,
     swarmSplitAngleDeg: experiment.swarmSplitAngleDeg,
+    cylinderDistance: experiment.cylinderDistance,
+    cylinderRadius: experiment.cylinderRadius,
+    cylinderHeight: experiment.cylinderHeight,
     visibilityRule: experiment.visibilityRule,
     boundaryMode: experiment.boundaryMode,
     hexSpacing: experiment.hexSpacing,
@@ -1706,6 +1798,11 @@ function recordPhaseEvent(label) {
 
 function sanitizeConfigUpdate(payload) {
   if (!payload || typeof payload !== "object") return;
+  const previousCylinderDistance = experiment.cylinderDistance;
+  const previousSplitAngle = experiment.swarmSplitAngleDeg;
+  for (const [key, min, max] of [["cylinderDistance", 8, 500], ["cylinderRadius", 0.5, 4], ["cylinderHeight", 4, 24]]) {
+    if (Number.isFinite(payload[key])) experiment[key] = clampNumber(payload[key], min, max);
+  }
   const prevPhase = experiment.phase;
   const prevModel = experiment.botModel;
   const prevRule = experiment.visibilityRule;
@@ -1870,6 +1967,14 @@ function sanitizeConfigUpdate(payload) {
     experiment.botSpawnRadius = clampNumber(payload.botSpawnRadius, 2, 80);
   }
 
+  // A distance-only change moves the targets back without spreading them apart.
+  // Explicitly changing both angle and distance still defines a new condition.
+  if (isCylinderExperiment() && experiment.cylinderDistance !== previousCylinderDistance &&
+      (!Number.isFinite(payload.swarmSplitAngleDeg) || payload.swarmSplitAngleDeg === previousSplitAngle)) {
+    const halfGap = previousCylinderDistance * Math.sin(previousSplitAngle * Math.PI / 360);
+    experiment.swarmSplitAngleDeg = 2 * Math.asin(Math.min(1, halfGap / experiment.cylinderDistance)) * 180 / Math.PI;
+  }
+  enforceCylinderSetup();
   ensureBotCount();
   if (prevPhase !== experiment.phase || prevModel !== experiment.botModel || prevRule !== experiment.visibilityRule) {
     recordPhaseEvent(`${experiment.phase} | ${experiment.botModel} | ${experiment.visibilityRule}`);
@@ -1941,6 +2046,9 @@ function triggerLoomingStimulus(targetAgentId = null) {
 function handleExperimentAction(payload) {
   if (!payload || typeof payload !== "object") return;
   const action = payload.action;
+  if (typeof action === "string" && action.startsWith("preset_")) {
+    for (const h of humans.values()) h.cylinderRewardUntil = 0;
+  }
 
   if (action === "preset_expt1a_entrain") {
     // Expt 1A: Locust Swarm Entrainment (14 bots marching, students only see bots)
@@ -1988,6 +2096,24 @@ function handleExperimentAction(payload) {
       resetAllPositions({ alignBotsToSwarm: false });
     }
     recordPhaseEvent(payload.resetPositions ? "Expt 1B: 15 Students (Reset)" : "Expt 1B: 15 Students (In-Place)");
+  } else if (action === "preset_expt2_cylinders") {
+    const enteringCylinders = !isCylinderExperiment();
+    experiment.activePreset = "expt2_cylinders";
+    experiment.botModel = "bifurcating_swarm"; // keep the existing two-direction heading plots
+    enforceCylinderSetup();
+    if (Number.isFinite(payload.swarmSplitAngleDeg)) {
+      experiment.swarmSplitAngleDeg = clampNumber(payload.swarmSplitAngleDeg, 0, 180);
+    } else if (enteringCylinders) {
+      // Preserve the original 25.24 m target gap at the farther starting distance.
+      experiment.swarmSplitAngleDeg = 2 * Math.asin(Math.min(1, 22 * Math.sin(35 * Math.PI / 180) / experiment.cylinderDistance)) * 180 / Math.PI;
+    }
+    experiment.running = true;
+    visibilityOverrides.clear();
+    ensureBotCount();
+    resetDefaultGroupsAndScarves();
+    resetAllScores();
+    resetAllPositions();
+    recordPhaseEvent(`Cylinder bifurcation (Δθ=${experiment.swarmSplitAngleDeg}°, solo)`);
   } else if (action === "preset_expt2_bifurcation") {
     // Expt 2: Couzin Two-Stream Bifurcation
     experiment.activePreset = "expt2_bifurcation";

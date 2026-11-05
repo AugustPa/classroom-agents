@@ -55,6 +55,9 @@
         <button id="btnExpt2Bifurc" class="btn-protocol purple" title="Couzin et al. 2005: Two bot streams at ±Δθ/2">
           2: Bifurcation (±Δθ)
         </button>
+        <button id="btnExpt2Cylinders" class="btn-protocol purple" title="Two stationary black cylinders; students see no other players or bots">
+          2C: Cylinder bifurcation (Solo)
+        </button>
         <button id="btnExpt3Informed" class="btn-protocol gold" title="Couzin et al. 2005: K=3 secret leaders among 15 students">
           3: Informed (K=3)
         </button>
@@ -193,7 +196,7 @@
                 <label for="swarmSplitAngleDeg">Bifurcation Split Δθ (Expt 2)</label>
                 <span class="val-badge" id="splitAngleBadge">70° (±35°)</span>
               </div>
-              <input id="swarmSplitAngleDeg" type="range" min="0" max="160" step="2" value="70" />
+              <input id="swarmSplitAngleDeg" type="range" min="0" max="180" step="any" value="70" />
               <div class="quick-angles">
                 <button type="button" class="chip-split" data-split="20">20°</button>
                 <button type="button" class="chip-split" data-split="45">45°</button>
@@ -202,6 +205,16 @@
                 <button type="button" class="chip-split" data-split="130">130°</button>
                 <button type="button" class="chip-split" data-split="160">160°</button>
               </div>
+            </div>
+
+            <div class="row">
+              <label for="cylinderDistance">Cylinder distance from start (m)</label>
+              <input id="cylinderDistance" type="number" min="8" max="500" step="1" value="120" />
+              <label for="cylinderRadius">Cylinder radius (m)</label>
+              <input id="cylinderRadius" type="number" min="0.5" max="4" step="0.5" value="2" />
+              <label for="cylinderHeight">Cylinder height (m)</label>
+              <input id="cylinderHeight" type="number" min="4" max="24" step="1" value="12" />
+              <p class="small">2C uses the split angle and direction above. Increasing distance keeps the target spacing fixed, so they appear closer together. Targets stay fixed as students walk in an open arena. Reset Positions starts everyone at the centre, facing between the targets. At wide angles, look left/right to see both.</p>
             </div>
 
             <div class="row">

@@ -37,6 +37,7 @@
   });
 
   const CRUX = {
+    expt2_cylinders:{title:"Cylinder bifurcation — individual two-target experiment",body:"<strong>Setup:</strong> two stationary black cylinders, equal distance from a common start; no visible peers or bots. Set Δθ, direction, distance and size, then Reset Positions. Increasing distance preserves the physical target spacing, reducing the starting angle. <strong>Measure:</strong> compare recorded paths and initial headings across repeated trials and angles. A split is a hypothesis to test, not a guaranteed result. Heading markers show target bearings from the start; bearings change as students walk."},
     expt1_entrain:{title:"Expt 1A — Locust marching entrainment · Vicsek (1995); Buhl et al., Science (2006)",body:"<strong>Do:</strong> 14 bots march at θ<sub>swarm</sub>; students see only bots. <strong>Watch:</strong> Φ<sub>humans</sub> (alignment, 0=gas, 1=marching band) and entrainment ⟨cos(θ−θ<sub>swarm</sub>)⟩. Sweep noise η high→low to show disorder→order. <strong>Explain:</strong> density + alignment can create a marching band with no leader."},
     expt1_handoff:{title:"Expt 1B — Handoff: do 15 students keep marching alone? · Buhl et al. (2006)",body:"<strong>Do:</strong> bots vanish; the same 15 students now see only each other (same peer count, N−1=14). <strong>Watch:</strong> does Φ<sub>humans</sub> stay high, decay, or re-form in a new direction (polar rose)? <strong>Explain:</strong> entrainment can persist through peer feedback — or collapse without the external flow."},
     expt2_bifurcation:{title:"Expt 2 — Two-choice decision & bifurcation · Couzin et al., Nature (2005)",body:"<strong>Do:</strong> bots split into two streams at θ<sub>swarm</sub> ± Δθ/2. Try Δθ = 20°, 45°, 70°, 100°. <strong>Watch:</strong> heading histogram — one central peak = compromise averaging; two peaks at ±Δθ/2 = symmetry breaking. <strong>Crux:</strong> groups cannot average widely separated options."},
@@ -59,7 +60,7 @@
   const plotViews={metrics:{custom:false,t0:0,t1:1},dynamics:{custom:false,t0:0,t1:1}};
   const trailsByAgent=new Map();
   const globalTracks=new Map();
-  const CONTROL_IDS=new Set(["phase","botModel","boundaryMode","visibilityRule","swarmDirectionDeg","swarmR","swarmSplitAngleDeg","swarmNoise","swarmAlignStrength","informedCount","topologicalK","metricRadius","oasisEnabled","oasisShowHint","oasisRadius","oasisSlowFactor","stopAndGoEnabled","collisionScoreEnabled","collisionStopDist","collisionRadius","deadTimeSec","showScarves","showTags","matchBotsToHumans","botCount","humanSpeed","botSpeed","speedVariance","humanSize","botSize","running","hexSpacing","hexRings","mirrorGhosts","trailSource"]);
+  const CONTROL_IDS=new Set(["cylinderDistance","cylinderRadius","cylinderHeight","phase","botModel","boundaryMode","visibilityRule","swarmDirectionDeg","swarmR","swarmSplitAngleDeg","swarmNoise","swarmAlignStrength","informedCount","topologicalK","metricRadius","oasisEnabled","oasisShowHint","oasisRadius","oasisSlowFactor","stopAndGoEnabled","collisionScoreEnabled","collisionStopDist","collisionRadius","deadTimeSec","showScarves","showTags","matchBotsToHumans","botCount","humanSpeed","botSpeed","speedVariance","humanSize","botSize","running","hexSpacing","hexRings","mirrorGhosts","trailSource"]);
   const isFocused=()=>{const a=document.activeElement;return !!a&&CONTROL_IDS.has(a.id);};
   const num=(el,f=0)=>{if(!el)return f;const v=Number(String(el.value).replace(",","."));return Number.isFinite(v)?v:f;};
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -70,7 +71,7 @@
 
   function emitConfig(){
     badges();
-    socket.emit("admin:setConfig",{phase:phaseEl.value,botModel:botModelEl.value,boundaryMode:boundaryModeEl.value,visibilityRule:visibilityRuleEl.value,swarmDirectionDeg:num(swarmDirectionDegEl,0),swarmR:num(swarmREl,0.96),swarmSplitAngleDeg:num(swarmSplitAngleDegEl,70),swarmAlignStrength:num(swarmAlignStrengthEl,0.35),metricRadius:num(metricRadiusEl,10),topologicalK:num(topologicalKEl,4),oasisEnabled:oasisEnabledEl.checked,oasisShowHint:oasisShowHintEl.checked,oasisRadius:num(oasisRadiusEl,11),oasisSlowFactor:num(oasisSlowFactorEl,0.32),stopAndGoEnabled:stopAndGoEnabledEl?stopAndGoEnabledEl.checked:false,collisionScoreEnabled:collisionScoreEnabledEl?collisionScoreEnabledEl.checked:false,collisionStopDist:num(collisionStopDistEl,2.1),collisionRadius:num(collisionRadiusEl,1.25),deadTimeSec:num(deadTimeSecEl,8),showScarves:showScarvesEl.checked,showTags:showTagsEl.checked,showBotTrails:!!state.ui.showBotTrails,showHumanTrails:!!state.ui.showHumanTrails,matchBotsToHumans:matchBotsToHumansEl.checked,botCount:num(botCountEl,14),humanSpeed:num(humanSpeedEl,6.2),botSpeed:num(botSpeedEl,5.5),speedVariance:num(speedVarianceEl,0.15),humanSize:num(humanSizeEl,1),botSize:num(botSizeEl,1),randomWalkTurnRate:num(randomWalkTurnRateEl,0.12),randomWalkSpeedJitter:num(speedVarianceEl,0.15),humanSpawnRadius:num(humanSpawnRadiusEl,7),botSpawnRadius:num(botSpawnRadiusEl,12),running:runningEl.checked,hexSpacing:num(hexSpacingEl,24),hexRings:num(hexRingsEl,2),mirrorGhosts:mirrorGhostsEl?mirrorGhostsEl.checked:true});
+    socket.emit("admin:setConfig",{cylinderDistance:num($("cylinderDistance"),120),cylinderRadius:num($("cylinderRadius"),2),cylinderHeight:num($("cylinderHeight"),12),phase:phaseEl.value,botModel:botModelEl.value,boundaryMode:boundaryModeEl.value,visibilityRule:visibilityRuleEl.value,swarmDirectionDeg:num(swarmDirectionDegEl,0),swarmR:num(swarmREl,0.96),swarmSplitAngleDeg:num(swarmSplitAngleDegEl,70),swarmAlignStrength:num(swarmAlignStrengthEl,0.35),metricRadius:num(metricRadiusEl,10),topologicalK:num(topologicalKEl,4),oasisEnabled:oasisEnabledEl.checked,oasisShowHint:oasisShowHintEl.checked,oasisRadius:num(oasisRadiusEl,11),oasisSlowFactor:num(oasisSlowFactorEl,0.32),stopAndGoEnabled:stopAndGoEnabledEl?stopAndGoEnabledEl.checked:false,collisionScoreEnabled:collisionScoreEnabledEl?collisionScoreEnabledEl.checked:false,collisionStopDist:num(collisionStopDistEl,2.1),collisionRadius:num(collisionRadiusEl,1.25),deadTimeSec:num(deadTimeSecEl,8),showScarves:showScarvesEl.checked,showTags:showTagsEl.checked,showBotTrails:!!state.ui.showBotTrails,showHumanTrails:!!state.ui.showHumanTrails,matchBotsToHumans:matchBotsToHumansEl.checked,botCount:num(botCountEl,14),humanSpeed:num(humanSpeedEl,6.2),botSpeed:num(botSpeedEl,5.5),speedVariance:num(speedVarianceEl,0.15),humanSize:num(humanSizeEl,1),botSize:num(botSizeEl,1),randomWalkTurnRate:num(randomWalkTurnRateEl,0.12),randomWalkSpeedJitter:num(speedVarianceEl,0.15),humanSpawnRadius:num(humanSpawnRadiusEl,7),botSpawnRadius:num(botSpawnRadiusEl,12),running:runningEl.checked,hexSpacing:num(hexSpacingEl,24),hexRings:num(hexRingsEl,2),mirrorGhosts:mirrorGhostsEl?mirrorGhostsEl.checked:true});
   }
   const debouncers=new Map();
   const debounced=(k)=>{clearTimeout(debouncers.get(k));debouncers.set(k,setTimeout(emitConfig,120));};
@@ -88,6 +89,9 @@
   $("btnExpt1A").onclick=()=>action({action:"preset_expt1a_entrain"},"expt1_entrain");
   $("btnExpt1BInPlace").onclick=()=>{clearTrackStores();action({action:"preset_expt1b_handoff",resetPositions:false},"expt1_handoff");};
   $("btnExpt1BReset").onclick=()=>{clearTrackStores();action({action:"preset_expt1b_handoff",resetPositions:true},"expt1_handoff");};
+  ["cylinderRadius","cylinderHeight"].forEach(id=>wire($(id),false));
+  $("cylinderDistance").addEventListener("change",()=>{mark();socket.emit("admin:setConfig",{cylinderDistance:num($("cylinderDistance"),120)});});
+  $("btnExpt2Cylinders").onclick=()=>{clearTrackStores();action({action:"preset_expt2_cylinders",swarmSplitAngleDeg:state.config.activePreset==="expt2_cylinders"?num(swarmSplitAngleDegEl,12):undefined},"expt2_cylinders");};
   $("btnExpt2Bifurc").onclick=()=>action({action:"preset_expt2_bifurcation",swarmSplitAngleDeg:num(swarmSplitAngleDegEl,70)},"expt2_bifurcation");
   $("btnExpt3Informed").onclick=()=>{if(informedCountEl)informedCountEl.value="3";action({action:"preset_expt3_informed",informedCount:3},"expt3_informed");};
   $("btnExpt4Echo").onclick=()=>action({action:"preset_expt4_echo",colorScarvesByChamber:true},"expt4_echo");
@@ -408,6 +412,18 @@
     }else{
       godCtx.fillStyle="#93c5fd";godCtx.fillText("Global metres, unwrapped — a straight march stays a straight line.",10,16);
     }
+    const targetConfig=replayAgents ? (state.replay.trial?.config||{}) : state.config;
+    if(targetConfig.activePreset==="expt2_cylinders"){
+      const base=targetConfig.swarmDirectionDeg*Math.PI/180,half=targetConfig.swarmSplitAngleDeg*Math.PI/360;
+      const sx=state.world.width/2,sy=state.world.height/2;
+      for(const branch of [-1,1]){
+        const tx=sx+Math.cos(base+branch*half)*(targetConfig.cylinderDistance??22),ty=sy+Math.sin(base+branch*half)*(targetConfig.cylinderDistance??22);
+        const[x,y]=XY(tx,ty),[ox,oy]=XY(sx,sy);
+        godCtx.strokeStyle="rgba(148,163,184,0.4)";godCtx.setLineDash([4,4]);godCtx.beginPath();godCtx.moveTo(ox,oy);godCtx.lineTo(x,y);godCtx.stroke();godCtx.setLineDash([]);
+        godCtx.beginPath();godCtx.arc(x,y,(targetConfig.cylinderRadius??2)*scale,0,Math.PI*2);godCtx.fillStyle="#000";godCtx.fill();godCtx.strokeStyle="#cbd5e1";godCtx.stroke();
+        godCtx.fillStyle="#cbd5e1";godCtx.fillText(branch<0?"Target A":"Target B",x+8,y-8);
+      }
+    }
     if(state.config.oasisEnabled){const[ox,oy]=XY(state.config.oasisX,state.config.oasisY);godCtx.beginPath();godCtx.arc(ox,oy,(state.config.oasisRadius||11)*scale,0,Math.PI*2);godCtx.fillStyle="rgba(14,165,233,0.16)";godCtx.fill();godCtx.strokeStyle="#38bdf8";godCtx.lineWidth=1.6;godCtx.stroke();}
     const cellTracks=replayAgents?state.replay.tracks.cell:trailsByAgent;
     const globTracks=replayAgents?state.replay.tracks.global:globalTracks;
@@ -566,7 +582,14 @@
     const label=t=>{c.fillStyle="#e2e8f0";c.fillText(t,10,16);};
     const live=(t,y=h-10)=>{c.fillStyle="#fde68a";c.fillText(t,10,y);};
     const frame=(x=30,y=34,fw=w-55,fh=h-72)=>{c.strokeStyle="rgba(148,163,184,0.38)";c.lineWidth=1;c.strokeRect(x,y,fw,fh);return{x,y,fw,fh};};
-    if(preset==="expt2_bifurcation"){
+    if(preset==="expt2_cylinders"){
+      label("Individual target choice — compare repeated trials");
+      c.fillStyle="#94a3b8";
+      c.fillText("Small angle: do paths stay near the midline?",24,62);
+      c.fillText("Wide angle: do paths separate toward the targets?",24,92);
+      c.fillText("Use trajectories; current headings alone are insufficient.",24,122);
+      live(`Split ${Math.round(state.config.swarmSplitAngleDeg)} deg · targets ${state.config.cylinderDistance} m from start`);
+    } else if(preset==="expt2_bifurcation"){
       label("Couzin 2005: small split averages · large split chooses");
       const split=Number(state.config.swarmSplitAngleDeg||0);
       const hist=(ox,peaks,title)=>{
@@ -666,7 +689,7 @@
   if(copyBtn)copyBtn.addEventListener("click",async()=>{
     const cfg=state.config;const q=new URLSearchParams();
     q.set("preset",cfg.activePreset||"custom");
-    for(const k of ["swarmDirectionDeg","swarmR","swarmSplitAngleDeg","swarmNoise","swarmAlignStrength","speedVariance","visibilityRule","topologicalK","metricRadius","informedCount","hexSpacing","hexRings","boundaryMode","botCount","phase","botModel","stopAndGoEnabled","collisionScoreEnabled"])if(cfg[k]!==undefined)q.set(k,String(cfg[k]));
+    for(const k of ["cylinderDistance","cylinderRadius","cylinderHeight","swarmDirectionDeg","swarmR","swarmSplitAngleDeg","swarmNoise","swarmAlignStrength","speedVariance","visibilityRule","topologicalK","metricRadius","informedCount","hexSpacing","hexRings","boundaryMode","botCount","phase","botModel","stopAndGoEnabled","collisionScoreEnabled"])if(cfg[k]!==undefined)q.set(k,String(cfg[k]));
     const url=`${location.origin}/admin?${q.toString()}`;
     try{await navigator.clipboard.writeText(url);copyBtn.textContent="✅ Copied experiment URL";}catch(e){window.prompt("Copy experiment URL:",url);}
     setTimeout(()=>{copyBtn.textContent="🔗 Copy Experiment URL (encodes preset + config)";},2200);
@@ -675,11 +698,11 @@
   function applyUrlConfigOnce(){
     if(urlApplied)return;urlApplied=true;
     const q=new URLSearchParams(location.search);if(![...q.keys()].length)return;
-    const cfg={};for(const k of ["swarmDirectionDeg","swarmR","swarmSplitAngleDeg","swarmNoise","swarmAlignStrength","speedVariance","topologicalK","metricRadius","informedCount","hexSpacing","hexRings","botCount","collisionStopDist","collisionRadius"])if(q.has(k))cfg[k]=Number(q.get(k));
+    const cfg={};for(const k of ["cylinderDistance","cylinderRadius","cylinderHeight","swarmDirectionDeg","swarmR","swarmSplitAngleDeg","swarmNoise","swarmAlignStrength","speedVariance","topologicalK","metricRadius","informedCount","hexSpacing","hexRings","botCount","collisionStopDist","collisionRadius"])if(q.has(k))cfg[k]=Number(q.get(k));
     for(const k of ["visibilityRule","boundaryMode","phase","botModel"])if(q.has(k))cfg[k]=q.get(k);
     for(const k of ["stopAndGoEnabled","collisionScoreEnabled"])if(q.has(k))cfg[k]=q.get(k)==="true"||q.get(k)==="1";
     if(Object.keys(cfg).length)socket.emit("admin:setConfig",cfg);
-    const preset=q.get("preset");const map={expt1_entrain:"preset_expt1a_entrain",expt1a:"preset_expt1a_entrain",expt1_handoff:"preset_expt1b_handoff",expt1b:"preset_expt1b_handoff",expt2_bifurcation:"preset_expt2_bifurcation",expt2:"preset_expt2_bifurcation",expt3_informed:"preset_expt3_informed",expt3:"preset_expt3_informed",expt4_echo:"preset_expt4_echo",expt4_sensory:"preset_expt4_topological",expt5_predator:"preset_expt5_predator",expt6_taxis:"preset_expt6_taxis",expt7_stopgo:"preset_expt7_stopgo",expt7:"preset_expt7_stopgo",expt8_avoid_bumps:"preset_expt8_avoid_bumps",expt8:"preset_expt8_avoid_bumps"};
+    const preset=q.get("preset");const map={expt2_cylinders:"preset_expt2_cylinders",expt1_entrain:"preset_expt1a_entrain",expt1a:"preset_expt1a_entrain",expt1_handoff:"preset_expt1b_handoff",expt1b:"preset_expt1b_handoff",expt2_bifurcation:"preset_expt2_bifurcation",expt2:"preset_expt2_bifurcation",expt3_informed:"preset_expt3_informed",expt3:"preset_expt3_informed",expt4_echo:"preset_expt4_echo",expt4_sensory:"preset_expt4_topological",expt5_predator:"preset_expt5_predator",expt6_taxis:"preset_expt6_taxis",expt7_stopgo:"preset_expt7_stopgo",expt7:"preset_expt7_stopgo",expt8_avoid_bumps:"preset_expt8_avoid_bumps",expt8:"preset_expt8_avoid_bumps"};
     if(preset&&map[preset])setTimeout(()=>socket.emit("admin:experimentAction",{action:map[preset],resetPositions:true,informedCount:cfg.informedCount??3,swarmSplitAngleDeg:cfg.swarmSplitAngleDeg,colorScarvesByChamber:true}),350);
   }
 
@@ -703,6 +726,7 @@
   }
 
   function syncControls(){
+    for(const [key,fallback] of [["cylinderDistance",120],["cylinderRadius",2],["cylinderHeight",12]]) $(key).value=String(state.config[key]??fallback);
     phaseEl.value=state.config.phase;botModelEl.value=state.config.botModel;boundaryModeEl.value=state.config.boundaryMode;visibilityRuleEl.value=state.config.visibilityRule||"all";
     swarmDirectionDegEl.value=String(state.config.swarmDirectionDeg??0);if(swarmREl)swarmREl.value=String(state.config.swarmR??0.96);swarmSplitAngleDegEl.value=String(state.config.swarmSplitAngleDeg??70);
     if(speedVarianceEl)speedVarianceEl.value=String(state.config.speedVariance??0.15);
@@ -723,6 +747,7 @@
     expt1_entrain:["btnExpt1A"],
     expt1_handoff:["btnExpt1BInPlace","btnExpt1BReset"],
     expt2_bifurcation:["btnExpt2Bifurc"],
+    expt2_cylinders:["btnExpt2Cylinders"],
     expt3_informed:["btnExpt3Informed"],
     expt4_echo:["btnExpt4Echo"],
     expt4_sensory:["btnExpt4Topo"],
@@ -749,7 +774,7 @@
     updateActivePresetButtons();
     kpiPhaseEl.textContent=state.config.phase;kpiModelEl.textContent=`${state.config.botModel} | vis: ${state.config.visibilityRule||"all"}`;
     kpiHumansEl.textContent=state.counts.humans;kpiBotsEl.textContent=state.counts.bots;
-    kpiMatchStatusEl.textContent=state.config.matchBotsToHumans?"Auto-matched (N−1)":"14 bots (N−1 for 15 students)";
+    kpiMatchStatusEl.textContent=state.config.activePreset==="expt2_cylinders"?"Isolated participants · stationary targets":state.config.matchBotsToHumans?"Auto-matched (N−1)":`${state.counts.bots} bots`;
     kpiHumanPhiEl.textContent=Number(m.humanPolarization??0).toFixed(3);
     kpiHumanHeadingEl.textContent=`Mean θ: ${Math.round(m.humanMeanHeadingDeg??0)}° | Speed: ${Number(m.humanMeanSpeed??0).toFixed(1)} m/s`;
     kpiEntrainmentEl.textContent=Number(m.humanEntrainment??0).toFixed(3);
@@ -1163,6 +1188,12 @@
     hideAdminLock();
   });
   socket.on("admin:state",(p)=>{
+    if(p?.config?.activePreset==="expt2_cylinders" && (state.config.activePreset!=="expt2_cylinders" || (!state.ui.god.userMoved && state.config.cylinderDistance!==p.config.cylinderDistance))){
+      state.ui.mapMode="global";
+      state.ui.godSpanMeters=Math.max(90,p.config.cylinderDistance*4);
+      state.ui.god.span=state.ui.godSpanMeters;
+      if(godZoomEl)godZoomEl.value=String(state.ui.god.span);
+    }
     if(!p)return;state.world=p.world||state.world;state.agents=p.agents||[];state.counts=p.counts||state.counts;state.config=p.config||state.config;state.matrix=p.matrix;state.metrics=p.metrics;state.metricsHistory=p.metricsHistory||[];state.phaseTransitionCurve=p.phaseTransitionCurve||[];state.phaseEvents=p.phaseEvents||[];state.logFile=p.logFile||"";state.lastStartleAt=p.lastStartleAt||state.lastStartleAt||0;
     state.publicUrl=p.publicUrl||state.publicUrl||"";
     state.trialLive=p.trialLive||null;

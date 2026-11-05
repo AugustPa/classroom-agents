@@ -7,6 +7,8 @@ import { io } from "/socket.io/socket.io.esm.min.js";
 const socket = io({ autoConnect: false, query: { role: "participant" } });
 const canvas = document.getElementById("world3d");
 const hud = document.getElementById("hud");
+const rainbowRewardEl = document.getElementById("rainbowReward");
+let cylinderRewardActive = false;
 const taskBannerEl = document.getElementById("taskBanner");
 const taskTitleEl = document.getElementById("taskTitle");
 const taskBodyEl = document.getElementById("taskBody");
@@ -64,6 +66,8 @@ const state = {
   },
   instruction: { title: "", body: "" },
   activePreset: "",
+  cylinderTrialRevision: null,
+  cylinderGoalSequence: null,
   selfCanon: null, // last canonical (torus) position of self {x,y}
   selfContinuous: null, // unwrapped continuous position of self {x,y}
   lastBoundary: "",
@@ -131,6 +135,25 @@ const worldDecor = {
   informedBeacon: null,
   loomingMesh: null,
 };
+
+// Stationary visual targets, shared world coordinates; no periodic replicas or labels.
+const cylinderGroup = new THREE.Group();
+cylinderGroup.visible = false;
+scene.add(cylinderGroup);
+const cylinderGeometry = new THREE.CylinderGeometry(1, 1, 1, 64);
+const cylinderMaterial = new THREE.MeshBasicMaterial({ color: 0x000000, fog: false });
+for (let i = 0; i < 2; i += 1) {
+  cylinderGroup.add(new THREE.Mesh(cylinderGeometry, cylinderMaterial));
+}
+function syncCylinderStimuli(stimuli) {
+  cylinderGroup.visible = state.activePreset === "expt2_cylinders" && stimuli.length === 2;
+  if (!cylinderGroup.visible) return;
+  stimuli.forEach((stimulus, i) => {
+    const mesh = cylinderGroup.children[i];
+    mesh.position.set(stimulus.x, stimulus.height / 2, stimulus.y);
+    mesh.scale.set(stimulus.radius, stimulus.height, stimulus.radius);
+  });
+}
 
 const agentVisuals = new Map();
 const forwardVec = new THREE.Vector3();
@@ -1125,6 +1148,33 @@ socket.on("world", (payload) => {
   }
   state.counts = payload.counts || state.counts;
   syncAgents(Array.isArray(payload.agents) ? payload.agents : []);
+  syncCylinderStimuli(Array.isArray(payload.stimuli) ? payload.stimuli : []);
+  if (state.activePreset === "expt2_cylinders" &&
+      (state.cylinderTrialRevision !== payload.cylinderTrialRevision || state.cylinderGoalSequence !== payload.cylinderGoalSequence)) {
+    const trialReset = state.cylinderTrialRevision !== payload.cylinderTrialRevision;
+    state.cylinderTrialRevision = payload.cylinderTrialRevision;
+    state.cylinderGoalSequence = payload.cylinderGoalSequence;
+    // Goal arrivals preserve held keys and camera direction; lecturer resets still reorient.
+    if (trialReset) {
+      const heading = payload.cylinderStartHeading * Math.PI / 180;
+      state.look.yaw = Math.atan2(-Math.cos(heading), -Math.sin(heading));
+      state.look.pitch = 0;
+      state.input.up = state.input.down = state.input.left = state.input.right = false;
+    }
+    state.looming = null;
+    if (worldDecor.loomingMesh) worldDecor.loomingMesh.visible = false;
+    const me = agentVisuals.get(state.you);
+    if (me) me.contSmooth.copy(me.contTarget);
+  }
+  cylinderRewardActive = state.activePreset === "expt2_cylinders" && payload.cylinderRewardRemainingMs > 0;
+  if (rainbowRewardEl) {
+    rainbowRewardEl.classList.toggle("is-active", cylinderRewardActive);
+    rainbowRewardEl.setAttribute("aria-hidden", String(!cylinderRewardActive));
+  }
+  if (state.activePreset !== "expt2_cylinders") {
+    state.cylinderTrialRevision = null;
+    state.cylinderGoalSequence = null;
+  }
 });
 
 setInterval(() => {
@@ -1557,6 +1607,14 @@ function connectStudent(name, code) {
   socket.connect();
   if (gate) gate.classList.add("is-hidden");
 }
+
+socket.on("disconnect", () => {
+  cylinderRewardActive = false;
+  if (rainbowRewardEl) {
+    rainbowRewardEl.classList.remove("is-active");
+    rainbowRewardEl.setAttribute("aria-hidden", "true");
+  }
+});
 
 socket.on("join:rejected", () => {
   const gate = document.getElementById("joinGate");
